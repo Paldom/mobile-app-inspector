@@ -1,0 +1,63 @@
+{
+  "skill": "android-apk-analysis",
+  "cases": [
+    { "type": "should_trigger", "prompt": "analyze this apk file for anything sketchy" },
+    { "type": "should_trigger", "prompt": "what's inside base.apk — permissions, signer, native libs" },
+    { "type": "should_trigger", "prompt": "who signed this apk and what's the cert fingerprint" },
+    { "type": "should_trigger", "prompt": "decompile this app and check for hardcoded secrets" },
+    { "type": "should_trigger", "prompt": "does this apk bundle any trackers or ad SDKs" },
+    { "type": "should_trigger", "prompt": "is this apk obfuscated or packed" },
+    { "type": "should_trigger", "prompt": "convert this aab to an apk and inspect it" },
+    { "type": "should_trigger", "prompt": "run a static security scan on this android build" },
+    { "type": "should_trigger", "prompt": "what permissions does this apk file request before I install it" },
+    { "type": "should_trigger", "prompt": "check the signing certificate of this apk against the last version" },
+
+    { "type": "should_not_trigger", "prompt": "what permissions does the installed app request on the emulator" },
+    { "type": "should_not_trigger", "prompt": "install this apk on the device" },
+    { "type": "should_not_trigger", "prompt": "what hosts does the app contact at runtime" },
+    { "type": "should_not_trigger", "prompt": "capture the app's network traffic" },
+    { "type": "should_not_trigger", "prompt": "tap through the app and screenshot each screen" },
+    { "type": "should_not_trigger", "prompt": "what's the app's rating on the play store" },
+    { "type": "should_not_trigger", "prompt": "review this pull request" },
+    { "type": "should_not_trigger", "prompt": "why did the installed app crash, check logcat" },
+    { "type": "should_not_trigger", "prompt": "decompile this iOS ipa" },
+
+    {
+      "type": "quality",
+      "prompt": "analyze base.apk — what's in it and who signed it",
+      "expected_behavior": [
+        "reports composition (dex count, native ABIs, size) from the APK zip, plus package/version/SDK from aapt2",
+        "reports the signer certificate SHA-256 and which signature schemes verify",
+        "notes that a valid signature does not prove the signer is trustworthy — compare the SHA-256 to a known-good build",
+        "records the input file's own sha256"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "decompile this apk and hunt for secrets and trackers",
+      "expected_behavior": [
+        "runs jadx / apkleaks / exodus only if installed, and names any layer it skipped because the tool is absent with the install command",
+        "does not claim a decompile/secret/tracker layer ran when its tool is missing",
+        "warns that secret and tracker scanners produce false positives and that static presence is not proof of runtime use"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "inspect this app.aab",
+      "expected_behavior": [
+        "normalizes the AAB to a universal APK with bundletool before analysis (an AAB manifest is protobuf, not aapt-readable)",
+        "notes the universal APK is not exactly what Play delivers per device (splits)",
+        "then runs the same inventory as for an APK"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "is this apk safe — it might be packed",
+      "expected_behavior": [
+        "runs the packer/obfuscator triage (apkid) first, or says it is skipped if apkid is absent",
+        "explains that packing/obfuscation and native .so code limit what Java decompilation can see",
+        "does not present decompiler output as complete when the app is obfuscated"
+      ]
+    }
+  ]
+}

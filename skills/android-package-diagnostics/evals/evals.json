@@ -1,0 +1,63 @@
+{
+  "skill": "android-package-diagnostics",
+  "cases": [
+    { "type": "should_trigger", "prompt": "what permissions does com.spotify.music actually request" },
+    { "type": "should_trigger", "prompt": "which version of the app is installed on the emulator" },
+    { "type": "should_trigger", "prompt": "did this app get installed from Play or sideloaded" },
+    { "type": "should_trigger", "prompt": "the app keeps dying, pull the crash log for com.example.app" },
+    { "type": "should_trigger", "prompt": "how much memory does it use and is it dropping frames" },
+    { "type": "should_trigger", "prompt": "list the dangerous permissions this package asks for" },
+    { "type": "should_trigger", "prompt": "where's the apk on device, i want its sha256" },
+    { "type": "should_trigger", "prompt": "whats the target sdk of the installed build" },
+    { "type": "should_trigger", "prompt": "is this app debuggable" },
+    { "type": "should_trigger", "prompt": "check whether there were any ANRs during that run" },
+
+    { "type": "should_not_trigger", "prompt": "tap through the settings screen and screenshot it" },
+    { "type": "should_not_trigger", "prompt": "install this play store link on the emulator" },
+    { "type": "should_not_trigger", "prompt": "do a complete review of this app and write it up" },
+    { "type": "should_not_trigger", "prompt": "what permissions should my app declare in its manifest" },
+    { "type": "should_not_trigger", "prompt": "read the app's SharedPreferences and sqlite database" },
+    { "type": "should_not_trigger", "prompt": "decompile this apk and show me the smali" },
+    { "type": "should_not_trigger", "prompt": "intercept the app's HTTPS traffic with mitmproxy" },
+    { "type": "should_not_trigger", "prompt": "why is my python process using so much memory" },
+    { "type": "should_not_trigger", "prompt": "scrape the play store listing's rating and download count" },
+
+    {
+      "type": "quality",
+      "prompt": "what permissions does com.example.app request and which are granted",
+      "expected_behavior": [
+        "separates permissions the app declares from the ones actually granted at runtime",
+        "classifies dangerous permissions using the device's own permission list rather than a hardcoded table",
+        "warns that installing with adb install -g pre-grants everything and skews the picture",
+        "does not claim to read app-private data that requires root"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "give me a full picture of the installed build of com.example.app",
+      "expected_behavior": [
+        "reports version name and code, min and target SDK, signer digest, and install source",
+        "lists every APK path and flags when the app is split into multiple APKs",
+        "summarises rather than pasting the full dumpsys output into the conversation"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "the app crashed, find out why",
+      "expected_behavior": [
+        "reads the dedicated crash log buffer rather than grepping the whole main log",
+        "notes that log buffers are ring buffers and should be cleared before a reproduction run",
+        "reports plainly when no crash is present instead of inventing a cause"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "can you read what this app stored in its private data directory",
+      "expected_behavior": [
+        "states that app-private storage is unreadable without root on a Play-signed image",
+        "explains that run-as only works for debuggable builds",
+        "offers a real alternative such as an AOSP image or a debuggable build rather than pretending"
+      ]
+    }
+  ]
+}

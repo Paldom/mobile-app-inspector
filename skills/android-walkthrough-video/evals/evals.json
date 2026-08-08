@@ -1,0 +1,63 @@
+{
+  "skill": "android-walkthrough-video",
+  "cases": [
+    { "type": "should_trigger", "prompt": "record a demo video of this app on the emulator" },
+    { "type": "should_trigger", "prompt": "make an mp4 walkthrough of the onboarding flow with captions" },
+    { "type": "should_trigger", "prompt": "can u screen record the app and add explanation text on top" },
+    { "type": "should_trigger", "prompt": "i need a gif of this flow for the README" },
+    { "type": "should_trigger", "prompt": "capture a tutorial video showing how to add an alarm" },
+    { "type": "should_trigger", "prompt": "record the checkout journey and label each step" },
+    { "type": "should_trigger", "prompt": "produce a captioned screen recording of the settings screen" },
+    { "type": "should_trigger", "prompt": "the cards in my walkthrough are the wrong text, re-render it" },
+    { "type": "should_trigger", "prompt": "screenrecord keeps producing an unplayable file" },
+    { "type": "should_trigger", "prompt": "make a short product demo clip from the android app" },
+
+    { "type": "should_not_trigger", "prompt": "take a screenshot of the current screen" },
+    { "type": "should_not_trigger", "prompt": "tap the Settings tab and read what it says" },
+    { "type": "should_not_trigger", "prompt": "review this app end to end and write a report" },
+    { "type": "should_not_trigger", "prompt": "install this play store link on the emulator" },
+    { "type": "should_not_trigger", "prompt": "what permissions does the app request" },
+    { "type": "should_not_trigger", "prompt": "record a video of my mac screen" },
+    { "type": "should_not_trigger", "prompt": "make a walkthrough video of our web app" },
+    { "type": "should_not_trigger", "prompt": "convert this mov file to mp4 with ffmpeg" },
+    { "type": "should_not_trigger", "prompt": "edit this youtube video and add subtitles" },
+
+    {
+      "type": "quality",
+      "prompt": "record a captioned demo of the app's main flow",
+      "expected_behavior": [
+        "starts the recording before driving the app, not after",
+        "stamps each explanation card while driving so its timestamp is measured rather than guessed",
+        "renders the finished mp4 and reports its dimensions, duration and card count",
+        "extracts and inspects at least one frame to confirm a card actually appears"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "the second card says the wrong thing, fix it",
+      "expected_behavior": [
+        "edits the card text in the existing session and re-renders",
+        "does not re-record the device to change caption text",
+        "keeps the original timestamps intact"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "my walkthrough video plays like a slideshow",
+      "expected_behavior": [
+        "identifies that screenrecord emits variable frame rate when the screen is static",
+        "re-renders at a constant frame rate rather than re-recording",
+        "does not blame the device or the encoder bitrate first"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "add a title card at the start and record the login flow",
+      "expected_behavior": [
+        "uses a hero-style card for the title and a corner card for step captions",
+        "warns that a card drawn over live footage should sit on a quiet moment",
+        "refuses to enter real credentials into the login flow and asks instead"
+      ]
+    }
+  ]
+}

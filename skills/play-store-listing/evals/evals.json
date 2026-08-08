@@ -1,0 +1,63 @@
+{
+  "skill": "play-store-listing",
+  "cases": [
+    { "type": "should_trigger", "prompt": "what's the rating and install count for com.spotify.music on the play store" },
+    { "type": "should_trigger", "prompt": "pull the recent reviews for this app https://play.google.com/store/apps/details?id=com.duolingo" },
+    { "type": "should_trigger", "prompt": "how many 1-star reviews does whatsapp have" },
+    { "type": "should_trigger", "prompt": "show me the star histogram for org.wikipedia" },
+    { "type": "should_trigger", "prompt": "what does the what's-new changelog say on the listing" },
+    { "type": "should_trigger", "prompt": "when was this app last updated according to the store" },
+    { "type": "should_trigger", "prompt": "scrape the newest 200 play store reviews for com.reddit.frontpage" },
+    { "type": "should_trigger", "prompt": "is this app free, does it have in-app purchases, what's its content rating" },
+    { "type": "should_trigger", "prompt": "get the market metadata for this play link" },
+    { "type": "should_trigger", "prompt": "what are users saying about the duolingo app lately" },
+
+    { "type": "should_not_trigger", "prompt": "install com.spotify.music on the emulator" },
+    { "type": "should_not_trigger", "prompt": "what version of the app is installed on the device" },
+    { "type": "should_not_trigger", "prompt": "what permissions does the installed app request" },
+    { "type": "should_not_trigger", "prompt": "review this app end to end and write a report" },
+    { "type": "should_not_trigger", "prompt": "tap the reviews tab inside the app and screenshot it" },
+    { "type": "should_not_trigger", "prompt": "what hosts does the app connect to" },
+    { "type": "should_not_trigger", "prompt": "reply to a user review on my own app" },
+    { "type": "should_not_trigger", "prompt": "download the apk for com.spotify.music" },
+    { "type": "should_not_trigger", "prompt": "what do the app store (ios) reviews say" },
+
+    {
+      "type": "quality",
+      "prompt": "what's the rating, installs and star histogram for org.wikipedia",
+      "expected_behavior": [
+        "extracts the package from the input and fetches via the google-play-scraper library, not the official Developer API",
+        "reports the score, ratings count, install range and per-star histogram",
+        "records the lang/country the numbers came from",
+        "fails loudly if the listing comes back with empty required fields rather than reporting nulls as fact"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "get the newest reviews for com.duolingo",
+      "expected_behavior": [
+        "paginates with the continuation token and throttles between pages",
+        "stops when the token is None rather than looping on an empty page",
+        "reports each review's score, date, text, and the app version it was left on"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "what exact version is com.duolingo on the store",
+      "expected_behavior": [
+        "reports that the listing shows 'Varies with device' for App Bundle apps",
+        "points to android-package-diagnostics on an installed copy for the real build",
+        "does not fabricate a version string"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "pull 5000 play store reviews for a popular app right now",
+      "expected_behavior": [
+        "warns about Play rate-limiting (503/CAPTCHA and IP bans) at that volume",
+        "throttles and caps pagination rather than hammering",
+        "suggests a paid provider (SerpApi) or caching for large-scale needs"
+      ]
+    }
+  ]
+}

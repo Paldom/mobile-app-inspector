@@ -1,0 +1,52 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Get the app on a device",
+      "description": "Hand it a Play Store link and it works out the package, checks whether the emulator can actually install anything, and gets the app running — or names exactly which wall you hit.",
+      "skills": [
+        "play-store-app-install"
+      ]
+    },
+    {
+      "title": "Drive it and take it apart",
+      "description": "The agent-shaped loop: a screen becomes a dozen numbered rows instead of 24KB of XML, taps target text rather than pixels, and assertions fail loudly with what was really on screen.",
+      "skills": [
+        "android-ui-driver",
+        "android-package-diagnostics",
+        "android-apk-analysis",
+        "android-app-profiling"
+      ]
+    },
+    {
+      "title": "Review the whole app",
+      "description": "Point it at a Play link and get a bounded, evidence-backed report — every finding tied to a screenshot, every skipped area named, and the app's own on-screen text treated as data rather than instructions.",
+      "skills": [
+        "android-app-review"
+      ]
+    },
+    {
+      "title": "Show it, don't tell it",
+      "description": "Record the app driving itself and burn explanation cards straight into the MP4 — because you cannot overlay a third-party Android app, the captions are stamped live and composited afterwards.",
+      "skills": [
+        "android-walkthrough-video"
+      ]
+    },
+    {
+      "title": "What the store and the wire say",
+      "description": "Read an app's public Play listing — rating, reviews, installs, changelog — and capture which servers it actually contacts, all without owning the app or rooting the device.",
+      "skills": [
+        "play-store-listing",
+        "android-network-trace"
+      ]
+    },
+    {
+      "title": "Is the UI any good",
+      "description": "A UX/UI heuristic audit: it measures touch targets and screen-reader-invisible controls from the accessibility tree, judges the twelve usability categories against fixed thresholds, and scores findings by severity — no laundered overall grade.",
+      "skills": [
+        "android-ux-audit"
+      ]
+    }
+  ]
+}

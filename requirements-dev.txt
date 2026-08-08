@@ -1,0 +1,7 @@
+# CI/dev tooling only — the validator itself is stdlib-only.
+# Dependabot (pip ecosystem) keeps this pinned version fresh.
+check-jsonschema==0.37.4
+
+# Optional, only for the play-store-listing skill (lazy-imported):
+# install in a venv — PEP 668 blocks a global install on Homebrew Python
+google-play-scraper==1.2.7

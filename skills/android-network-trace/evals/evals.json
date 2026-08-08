@@ -1,0 +1,63 @@
+{
+  "skill": "android-network-trace",
+  "cases": [
+    { "type": "should_trigger", "prompt": "what servers does this app talk to" },
+    { "type": "should_trigger", "prompt": "capture the network traffic while I use the app" },
+    { "type": "should_trigger", "prompt": "which hosts does com.example.app contact on launch" },
+    { "type": "should_trigger", "prompt": "trace the app's network calls and list the domains" },
+    { "type": "should_trigger", "prompt": "can you sniff what endpoints this app hits" },
+    { "type": "should_trigger", "prompt": "does this app phone home to any trackers" },
+    { "type": "should_trigger", "prompt": "set up mitmproxy to see the app's https requests" },
+    { "type": "should_trigger", "prompt": "get a pcap of the app and tell me the SNI names" },
+    { "type": "should_trigger", "prompt": "what URLs are baked into this apk" },
+    { "type": "should_trigger", "prompt": "record the app's connections and summarize the API calls" },
+
+    { "type": "should_not_trigger", "prompt": "install this app from the play store link" },
+    { "type": "should_not_trigger", "prompt": "what permissions does the app declare" },
+    { "type": "should_not_trigger", "prompt": "what's the app's rating and reviews on the play store" },
+    { "type": "should_not_trigger", "prompt": "tap through the app and screenshot each screen" },
+    { "type": "should_not_trigger", "prompt": "record a walkthrough video of the app" },
+    { "type": "should_not_trigger", "prompt": "why did the app crash, check logcat" },
+    { "type": "should_not_trigger", "prompt": "capture my mac's network traffic" },
+    { "type": "should_not_trigger", "prompt": "review this app end to end" },
+    { "type": "should_not_trigger", "prompt": "check the wifi speed on the emulator" },
+
+    {
+      "type": "quality",
+      "prompt": "what hosts does com.example.app contact",
+      "expected_behavior": [
+        "captures a pcap with adb emu network capture on the running emulator (no relaunch, no root)",
+        "extracts DNS names, TLS SNI and IP peers as separate evidence types",
+        "states the capture is device-wide and cannot be attributed to one package",
+        "suggests an idle baseline to subtract background noise"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "read the app's HTTPS request bodies",
+      "expected_behavior": [
+        "explains that a release-signed Play image can only install a user CA, which Android 7+ apps ignore, and pinning defeats even a trusted CA",
+        "does not claim to decrypt pinned or user-CA-ignoring traffic on the stock emulator",
+        "points to the documented escalations (user-CA APK repackage for non-pinned apps, or a rooted image + Frida)"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "the capture shows no DNS names at all",
+      "expected_behavior": [
+        "checks whether Private DNS (DoT) is on, which encrypts DNS out of the capture",
+        "notes that IP peers and TLS SNI are still available even without DNS",
+        "does not conclude the app made no network calls"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "list every endpoint this apk can reach",
+      "expected_behavior": [
+        "extracts http(s) URLs statically from the pulled APK bytes as a coverage complement",
+        "labels the result as static (over-reports libraries/dead code, not proof of contact)",
+        "combines it with the dynamic capture rather than presenting either as complete"
+      ]
+    }
+  ]
+}

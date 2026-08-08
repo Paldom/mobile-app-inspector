@@ -1,0 +1,62 @@
+{
+  "skill": "android-app-profiling",
+  "cases": [
+    { "type": "should_trigger", "prompt": "how fast does this app cold-start" },
+    { "type": "should_trigger", "prompt": "profile the app's startup time" },
+    { "type": "should_trigger", "prompt": "is the scrolling janky, measure the frame rate" },
+    { "type": "should_trigger", "prompt": "capture a perfetto trace of the app" },
+    { "type": "should_trigger", "prompt": "benchmark this app's launch time against the vitals thresholds" },
+    { "type": "should_trigger", "prompt": "does the app have a baseline profile / is it compiled speed-profile" },
+    { "type": "should_trigger", "prompt": "measure jank and frame times while I scroll" },
+    { "type": "should_trigger", "prompt": "is this app slow to start and does its memory grow over time" },
+    { "type": "should_trigger", "prompt": "trace what the app does during startup" },
+    { "type": "should_trigger", "prompt": "check the app's rendering performance" },
+
+    { "type": "should_not_trigger", "prompt": "what permissions does the app request" },
+    { "type": "should_not_trigger", "prompt": "why did the app crash, get the stack trace" },
+    { "type": "should_not_trigger", "prompt": "what version of the app is installed" },
+    { "type": "should_not_trigger", "prompt": "install this app from the play store" },
+    { "type": "should_not_trigger", "prompt": "what hosts does the app connect to" },
+    { "type": "should_not_trigger", "prompt": "decompile the apk and find secrets" },
+    { "type": "should_not_trigger", "prompt": "tap the login button and screenshot" },
+    { "type": "should_not_trigger", "prompt": "record a demo video of the app" },
+    { "type": "should_not_trigger", "prompt": "profile my python script's cpu usage" },
+
+    {
+      "type": "quality",
+      "prompt": "how fast does com.example.app cold start",
+      "expected_behavior": [
+        "runs am start -W multiple times, force-stopping before each cold run, and reports the median TotalTime",
+        "classifies the result against Android-vitals thresholds (cold excessive at >=5s)",
+        "notes that emulator timing is indicative, not device-grade"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "measure how janky the scrolling is",
+      "expected_behavior": [
+        "resets gfxinfo, has the app exercised, then reads the janky percentage and frame-time percentiles",
+        "warns when too few frames were captured to be meaningful",
+        "compares against the <1% good / 16.6ms-budget guidance rather than guessing"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "profile the app deeply during startup",
+      "expected_behavior": [
+        "captures a Perfetto system trace with no root and pulls it locally",
+        "does not claim to parse the protobuf trace itself — hands it to the Perfetto UI or trace_processor",
+        "points at the FrameTimeline for per-frame jank attribution"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "does this app have a baseline profile",
+      "expected_behavior": [
+        "reads dumpsys package dexopt for the compilation status",
+        "explains that speed-profile means a baseline profile is applied, and that verify right after install can be normal (cloud-profile dexopt queued)",
+        "does not conclude 'no profile' solely from a verify status"
+      ]
+    }
+  ]
+}

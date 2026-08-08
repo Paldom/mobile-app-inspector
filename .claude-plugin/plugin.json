@@ -1,0 +1,11 @@
+{
+  "name": "mobile-app-inspector",
+  "description": "Agent Skills for Android app inspection: install an app from a Play Store link onto an emulator or device, drive its UI, read on-screen text, capture screenshots, and assert behavior for review, QA testing, and exploration.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Paldom",
+    "url": "https://github.com/Paldom"
+  },
+  "homepage": "https://github.com/Paldom/mobile-app-inspector",
+  "license": "MIT"
+}

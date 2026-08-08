@@ -1,0 +1,64 @@
+{
+  "skill": "play-store-app-install",
+  "cases": [
+    { "type": "should_trigger", "prompt": "install https://play.google.com/store/apps/details?id=com.spotify.music on the emulator" },
+    { "type": "should_trigger", "prompt": "get this app onto my AVD: https://play.google.com/store/apps/details?id=com.duolingo" },
+    { "type": "should_trigger", "prompt": "can u sideload this apk for me, ~/Downloads/app-release.apk" },
+    { "type": "should_trigger", "prompt": "set up com.reddit.frontpage on the android emulator so i can poke at it" },
+    { "type": "should_trigger", "prompt": "whats the package name for this play store link" },
+    { "type": "should_trigger", "prompt": "adb install keeps failing with INSTALL_FAILED_NO_MATCHING_ABIS, help" },
+    { "type": "should_trigger", "prompt": "I have base.apk plus three split configs, put them on the device" },
+    { "type": "should_trigger", "prompt": "is com.whatsapp already installed on emulator-5554 and what version" },
+    { "type": "should_trigger", "prompt": "why cant I install anything from the Play Store on this AVD" },
+    { "type": "should_trigger", "prompt": "launch the app we just installed" },
+
+    { "type": "should_not_trigger", "prompt": "tap the Sign in button and read what the screen says" },
+    { "type": "should_not_trigger", "prompt": "what dangerous permissions does com.spotify.music request" },
+    { "type": "should_not_trigger", "prompt": "do a full review of this app: https://play.google.com/store/apps/details?id=com.duolingo" },
+    { "type": "should_not_trigger", "prompt": "npm install the appium uiautomator2 driver" },
+    { "type": "should_not_trigger", "prompt": "install the python dependencies for this repo" },
+    { "type": "should_not_trigger", "prompt": "publish my app to the Play Store, what does the review take" },
+    { "type": "should_not_trigger", "prompt": "screenshot the current screen of the app" },
+    { "type": "should_not_trigger", "prompt": "how do I install an app on an iPhone simulator" },
+    { "type": "should_not_trigger", "prompt": "why did com.example.app crash on launch, check logcat" },
+
+    {
+      "type": "quality",
+      "prompt": "install https://play.google.com/store/apps/details?id=com.spotify.music on the emulator",
+      "expected_behavior": [
+        "extracts the package name com.spotify.music from the link's id parameter rather than searching the web for it",
+        "runs a preflight that checks the device is booted, the image has the Play Store, and a Google account is signed in",
+        "stops and asks the human to sign in to Play by hand instead of trying to automate Google sign-in",
+        "verifies the result with pm path (not a pm list packages substring match) and reports the installed version"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "sideload ~/Downloads/app-release.apk onto the AVD and open it",
+      "expected_behavior": [
+        "uses adb install for a single APK and install-multiple when several splits are supplied",
+        "explains any INSTALL_FAILED_* code in plain language instead of echoing it raw",
+        "resolves the launcher activity and confirms the package is actually in the foreground after launch",
+        "does not download the APK from a third-party mirror"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "get com.example.bankingapp installed and running on the emulator",
+      "expected_behavior": [
+        "warns that integrity-gated apps such as banking apps commonly refuse to run on emulators",
+        "reports the specific failure state rather than retrying the same install repeatedly",
+        "suggests a physical device as the escalation path when Play Integrity blocks the emulator"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "the play store link is https://play.app.goo.gl/?link=abcd, install it",
+      "expected_behavior": [
+        "recognises that a shortened link cannot be resolved to a package name offline",
+        "asks for the expanded play.google.com URL or the package name instead of guessing",
+        "does not fabricate a package name"
+      ]
+    }
+  ]
+}

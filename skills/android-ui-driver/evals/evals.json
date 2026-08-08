@@ -1,0 +1,73 @@
+{
+  "skill": "android-ui-driver",
+  "cases": [
+    { "type": "should_trigger", "prompt": "tap the Sign in button in the app on the emulator" },
+    { "type": "should_trigger", "prompt": "what does the current screen say" },
+    { "type": "should_trigger", "prompt": "type my email into the login field then hit continue" },
+    { "type": "should_trigger", "prompt": "scroll down and tell me if there's a Delete account option" },
+    { "type": "should_trigger", "prompt": "screenshot each screen of the onboarding flow" },
+    { "type": "should_trigger", "prompt": "assert that the cart shows 3 items after i add one" },
+    { "type": "should_trigger", "prompt": "walk through the checkout flow and stop when u hit payment" },
+    { "type": "should_trigger", "prompt": "the uiautomator dump is huge, i just need the buttons on screen" },
+    { "type": "should_trigger", "prompt": "wait for the loading spinner to go away then continue" },
+    { "type": "should_trigger", "prompt": "go back twice and open settings in the app" },
+
+    { "type": "should_not_trigger", "prompt": "install com.spotify.music from this play store link" },
+    { "type": "should_not_trigger", "prompt": "what permissions does the installed app request" },
+    { "type": "should_not_trigger", "prompt": "review this app end to end and write me a report" },
+    { "type": "should_not_trigger", "prompt": "click the submit button on this web page" },
+    { "type": "should_not_trigger", "prompt": "write an Espresso test for our MainActivity" },
+    { "type": "should_not_trigger", "prompt": "how much memory is the app using" },
+    { "type": "should_not_trigger", "prompt": "take a screenshot of my mac screen" },
+    { "type": "should_not_trigger", "prompt": "automate this iOS app on the simulator" },
+    { "type": "should_not_trigger", "prompt": "set up an appium server and webdriverio project" },
+
+    {
+      "type": "quality",
+      "prompt": "open the app and tell me what's on the first screen",
+      "expected_behavior": [
+        "produces a compact numbered element list rather than dumping raw uiautomator XML into the conversation",
+        "reports the focused activity alongside the elements",
+        "says explicitly when the list was truncated instead of silently showing a subset",
+        "falls back to a screenshot when the snapshot comes back empty"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "tap Continue, then assert the Dashboard screen appeared",
+      "expected_behavior": [
+        "targets the element by visible text rather than by hardcoded pixel coordinates",
+        "waits for the new screen instead of sleeping a fixed amount and hoping",
+        "uses an assertion whose non-zero exit distinguishes pass from fail",
+        "re-snapshots after the tap rather than reusing indices from before it"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "type 日本語 into the search box",
+      "expected_behavior": [
+        "reports that adb input text cannot send non-ASCII characters rather than claiming success",
+        "names a concrete escalation such as uiautomator2 or an IME like ADBKeyBoard",
+        "does not silently type a mangled or truncated string"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "read the text on this screen — it's a Flutter app and the dump is coming back empty",
+      "expected_behavior": [
+        "recognises an empty snapshot as a capability limit rather than an error to retry forever",
+        "switches to a screenshot and reads it visually",
+        "explains that the accessibility tree only exposes what the app chose to publish"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "there are two Play buttons on screen, tap the second one",
+      "expected_behavior": [
+        "notices the ambiguity rather than silently tapping the first match",
+        "uses an explicit index or nth selector to disambiguate",
+        "confirms afterwards which element was actually tapped"
+      ]
+    }
+  ]
+}

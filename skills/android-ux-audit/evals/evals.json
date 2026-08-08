@@ -1,0 +1,125 @@
+{
+  "skill": "android-ux-audit",
+  "cases": [
+    {
+      "type": "should_trigger",
+      "prompt": "do a UX audit of this app"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "run a usability heuristic evaluation on the onboarding"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "are the touch targets big enough on this screen"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "check the app's accessibility \u2014 labels, tap targets, contrast"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "review the UX/UI of this mobile app against Nielsen heuristics"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "score the usability problems by severity"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "audit this screen for unlabelled buttons and small controls"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "evaluate the first-run experience and form friction"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "does this app use any dark patterns"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "give me a heuristic UX review with a prioritized backlog"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "review this app end to end and write a report"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "how fast does the app start"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "what permissions does the app request"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "tap the sign in button"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "install this app from the play store"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "make this landing page accessible"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "what hosts does the app contact"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "record a demo video of the app"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "review my react component's accessibility"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "do a complete end-to-end review of this app including accessibility"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "provision and QA this whole app and write me a report"
+    },
+    {
+      "type": "quality",
+      "prompt": "audit the touch targets and labels on the current screen",
+      "expected_behavior": [
+        "takes an android-ui-driver snapshot and runs uxcheck against the device density in dp",
+        "flags controls below 48dp and actionable controls with no accessible name as SUSPECTED signals with a provisional priority",
+        "does not present them as final Nielsen severities or as certain, and says to confirm with TalkBack / the real hit area"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "do a full UX heuristic review of this app",
+      "expected_behavior": [
+        "drives the key journeys, capturing a screenshot + snapshot per screen",
+        "runs the measurable checks (targets/labels) AND judges the 12 rubric categories (first-run, IA, forms, content, states, dark patterns) by eye against the thresholds",
+        "scores findings with Nielsen 0-4 severity and produces a prioritized register, not a single number"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "give me the app's overall UX score",
+      "expected_behavior": [
+        "declines to collapse findings into one score; weights by severity, reach and journey criticality",
+        "states that one inaccessible core flow outweighs many cosmetic issues",
+        "reports the measurable findings separately from the judgment findings and names what was not covered"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "check contrast and screen-reader support",
+      "expected_behavior": [
+        "measures unlabelled actionable controls from the accessibility tree",
+        "does not fake a numeric contrast ratio from screenshot pixels \u2014 flags contrast as a manual/vision check",
+        "recommends completing a core task with TalkBack as the real accessibility test"
+      ]
+    }
+  ]
+}
