@@ -1,5 +1,6 @@
 ---
 name: android-ux-audit
+license: MIT
 description: Runs a UX/UI heuristic audit of a running Android app - measurable touch-target and unlabelled-control checks from the accessibility tree plus a 12-category rubric scored by Nielsen 0-4 severity. Use when asked to audit UX, usability, or accessibility, evaluate touch targets or heuristics, or score usability problems. Not for a general end-to-end app review, performance, or web pages.
 argument-hint: "<what to audit — a screen or a journey>"
 ---

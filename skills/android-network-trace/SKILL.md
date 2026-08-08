@@ -1,5 +1,6 @@
 ---
 name: android-network-trace
+license: MIT
 description: Captures an Android app's network traffic on an emulator and reports the hosts it contacts - DNS, TLS SNI and IP peers from a device-wide pcap, static URLs from the APK, plus HTTP(S) bodies via mitmproxy where the app trusts a user CA. Use when asked what servers an app talks to, or to sniff, trace, or capture its traffic. Not for the Play listing, permissions, or UI driving.
 argument-hint: "<capture | hosts <pcap> | apk-endpoints <apk>>"
 ---

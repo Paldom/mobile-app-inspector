@@ -1,5 +1,6 @@
 ---
 name: play-store-app-install
+license: MIT
 description: Installs an Android app onto an emulator or device from a Google Play link, market:// URI, package name, or a local APK, then verifies and launches it. Use when the user shares a Play Store URL or asks to install, sideload, provision, or set up an app for testing, or hits an INSTALL_FAILED error. Not for driving the app's UI, reading its screens, or reviewing it.
 argument-hint: "<play-store-url | package-name | path/to.apk>"
 ---

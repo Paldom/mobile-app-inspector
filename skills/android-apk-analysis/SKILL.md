@@ -1,5 +1,6 @@
 ---
 name: android-apk-analysis
+license: MIT
 description: Statically analyzes an APK or AAB file on disk (no device) - composition, permissions, exported components, signer identity, and optional decompile, packer, secret, and tracker layers. Use when asked to analyze, inspect, decompile, or security-scan an .apk/.aab file, check its signer, or find hardcoded secrets or trackers. Not for an installed app, live traffic, or the Play listing.
 argument-hint: "<path to .apk / .aab / .apks / .xapk>"
 ---

@@ -1,5 +1,6 @@
 ---
 name: play-store-listing
+license: MIT
 description: Fetches public Google Play listing data for any app by link or package - star rating, ratings count, star histogram, install range, updated date, what's-new, and paginated reviews. Use when asked for an app's Play Store rating, reviews, install count, histogram, or changelog. Not for installing the app, on-device version/permissions, downloading APKs, or the official own-apps Developer API.
 argument-hint: "<play-store-url | package-name>"
 ---

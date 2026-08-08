@@ -1,5 +1,6 @@
 ---
 name: android-app-profiling
+license: MIT
 description: Profiles an installed Android app's runtime performance with no root - process-cold startup vs Android-vitals thresholds, frame jank and percentiles, memory (PSS), baseline-profile status, and Perfetto traces. Use when asked how fast an app starts, whether it's janky or slow, to measure frame rate or memory, or to capture a trace. Not for crash logs, a quick memory glance, or static APK analysis.
 argument-hint: "<package name> [startup|frames|memory|dexopt|trace]"
 ---

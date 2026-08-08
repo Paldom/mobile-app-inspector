@@ -1,5 +1,6 @@
 ---
 name: android-walkthrough-video
+license: MIT
 description: Records an Android app walkthrough to MP4 or GIF with explanation cards burned in - starts screenrecord, stamps captioned beats while you drive the app, then composites them with ffmpeg. Use when asked to record a demo, screen recording, tutorial video, product clip, or captioned walkthrough of an app. Not for single screenshots, UI assertions, web-app videos, or written app reviews.
 argument-hint: "<what flow to record>"
 ---

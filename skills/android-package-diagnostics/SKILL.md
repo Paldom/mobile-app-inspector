@@ -1,5 +1,6 @@
 ---
 name: android-package-diagnostics
+license: MIT
 description: Reports non-UI facts about an installed Android package - version, signer, install source, requested versus granted permissions, APK paths and hashes, crashes, ANRs, memory and jank. Use when asked what permissions an app requests, which version is installed, whether it was sideloaded, why it crashed, or its memory use. Not for tapping through the UI or end-to-end app reviews.
 argument-hint: "<package-name> [what to check]"
 ---

@@ -1,5 +1,6 @@
 ---
 name: android-ui-driver
+license: MIT
 description: Drives an installed Android app over adb - compact numbered screen snapshots, tap, type, swipe, read on-screen text, screenshot, wait, and assert. Use when the user asks to navigate, click, fill in, scroll, scrape text from, screenshot, or write UI assertions against an app on a device or emulator. Not for web pages or browsers, installing apps, package metadata, or end-to-end app reviews.
 argument-hint: "[what to do on screen]"
 ---
