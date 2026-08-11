@@ -118,7 +118,11 @@ class Device:
         return (self.run("shell", *quoted, timeout=timeout).stdout or "").replace("\r\n", "\n")
 
     def size(self) -> tuple[int, int]:
-        m = re.search(r"Physical size:\s*(\d+)x(\d+)", self.shell("wm", "size"))
+        # "Override size" wins when set (`wm size WxH`): that is what screenrecord
+        # captures and what the cards must be laid out against.
+        out = self.shell("wm", "size")
+        m = (re.search(r"Override size:\s*(\d+)x(\d+)", out)
+             or re.search(r"Physical size:\s*(\d+)x(\d+)", out))
         return (int(m.group(1)), int(m.group(2))) if m else (1080, 1920)
 
 

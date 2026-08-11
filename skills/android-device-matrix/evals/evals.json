@@ -1,0 +1,131 @@
+{
+  "skill": "android-device-matrix",
+  "cases": [
+    {
+      "type": "should_trigger",
+      "prompt": "test this app on different screen sizes"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "does the app work on a tablet"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "check the layout in landscape"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "what happens if the device has no camera"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "does it degrade gracefully when location permission is denied"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "run the app at 200% font size and see if anything breaks"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "sweep this app across a device matrix and tell me which configurations break"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "check the app on a foldable and a small phone"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "does the UI survive rotation"
+    },
+    {
+      "type": "should_trigger",
+      "prompt": "test the app offline and with mobile data off"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "review this app end to end and write a report"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "audit the touch targets and labels on this screen"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "how fast does the app start"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "what permissions does the app request"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "tap the search button and type Everest"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "install this app from the play store"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "what hosts does the app contact"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "make this web page responsive across breakpoints"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "record a demo video of the app"
+    },
+    {
+      "type": "should_not_trigger",
+      "prompt": "what ABIs and dex files are in this APK"
+    },
+    {
+      "type": "quality",
+      "prompt": "test this app across screen sizes and tell me what breaks",
+      "expected_behavior": [
+        "runs devmatrix.py with a named profile rather than hand-rolling wm size commands, and reports the per-cell status table",
+        "reports the dp bucket it VERIFIED from dumpsys (cur=WxH and swNNNdp read back after applying), not just the px/dpi arithmetic it intended",
+        "states the wm-size fidelity caveat — no display cutout, no real device aspect ratio or hinge, so a pass here is weaker evidence than a pass on a real device or a purpose-built AVD",
+        "restores the device configuration afterwards and says so"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "does the app fail gracefully if there is no camera",
+      "expected_behavior": [
+        "distinguishes what is testable at runtime on a stock emulator (permission revoke, appops deny, connectivity off) from what needs a differently configured AVD (hw.camera.back=none actually changes pm list features)",
+        "does not claim to have removed a hardware feature it cannot remove, and emits the AVD recipe instead when that is what the check requires",
+        "derives which capabilities matter from the APK manifest uses-feature/uses-permission (required vs optional) rather than testing a generic list"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "sweep the matrix and fail the build if anything breaks",
+      "expected_behavior": [
+        "separates HARD failures (crash or ANR attributable to the package during the cell, process death, activity not resumed) from SUSPECTED signals (blank screen, clipped or off-screen controls) and only gates on the former",
+        "exits non-zero when a hard failure is present",
+        "tags every finding with an evidenceType consistent with android-ux-audit rather than inventing a second severity vocabulary"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "the last matrix run crashed halfway, is my emulator still messed up",
+      "expected_behavior": [
+        "uses the restore/doctor path against the serial-keyed state file rather than guessing which settings were changed",
+        "knows that some resets are not restores — an appops mode whose original value was 'foreground' is not restored by setting it to 'default', and wm size/density need explicit reset",
+        "reports what it restored and what it could not"
+      ]
+    },
+    {
+      "type": "quality",
+      "prompt": "check the app at the largest font size and in dark mode",
+      "expected_behavior": [
+        "applies font_scale and uimode night as matrix cells and captures evidence per cell",
+        "hands the per-cell snapshot to android-ux-audit for the touch-target and unlabelled-control checks instead of re-implementing them",
+        "looks for truncated or clipped text at the large font scale and reports it as a suspected finding needing a human look"
+      ]
+    }
+  ]
+}

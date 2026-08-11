@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+  Comprehensive app-review report template.
+
+  `scripts/report.py build <run-dir>` fills the double-brace placeholders — TITLE,
+  SUBTITLE, NAV, BODY and GENERATED — and writes ONE self-contained file: no CDN,
+  no webfont, no JavaScript, no tracking. It opens offline, survives being emailed
+  as an attachment, and prints.
+
+  Structure is breadth-first: the overview answers everything at one line per
+  topic, each section leads with its own one-line summary and headline numbers,
+  and the tables and raw artifacts sit behind disclosure triangles. You should be
+  able to stop reading at any depth and not be misled.
+
+  Rebrand by editing the CSS below, or pass your own copy with
+  `report.py build <run-dir> --template mine.html`. Keep the placeholders, and do
+  not write them out in prose anywhere in the file — the fill is a plain string
+  replace, so a placeholder named in a comment gets filled too.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{TITLE}}</title>
+<style>
+  :root {
+    --bg: 0 0% 100%;            --fg: 240 10% 3.9%;
+    --card: 0 0% 100%;          --muted: 240 4.8% 95.9%;
+    --muted-fg: 240 3.8% 46.1%; --border: 240 5.9% 90%;
+    --accent: 221 83% 53%;      --ring: 240 5% 84%;
+    --ok: 142 71% 33%;          --warn: 38 92% 40%;
+    --bad: 0 72% 45%;           --info: 221 83% 53%;
+    --radius: .6rem;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --shadow: 0 1px 2px 0 hsl(240 4% 10% / .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: 240 10% 3.9%;         --fg: 0 0% 98%;
+      --card: 240 8% 6.5%;        --muted: 240 4% 12%;
+      --muted-fg: 240 5% 64.9%;   --border: 240 4% 16%;
+      --accent: 217 91% 70%;      --ring: 240 5% 26%;
+      --ok: 142 60% 55%;          --warn: 38 92% 62%;
+      --bad: 0 84% 68%;           --info: 217 91% 70%;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+  body {
+    margin: 0; background: hsl(var(--bg)); color: hsl(var(--fg));
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -.011em; -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.25rem 5rem;
+           display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 2.5rem; }
+  @media (max-width: 900px) { .shell { grid-template-columns: 1fr; gap: 1.25rem; } }
+
+  /* ---------- navigation: sticky, glassy, no JavaScript ---------- */
+  nav.toc { position: sticky; top: 1.5rem; align-self: start; max-height: calc(100vh - 3rem);
+            overflow-y: auto; font-size: .82rem; }
+  nav.toc .lbl { font-size: .66rem; text-transform: uppercase; letter-spacing: .09em;
+                 color: hsl(var(--muted-fg)); font-weight: 600; margin: 0 0 .5rem .55rem; }
+  nav.toc a { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline;
+              padding: .32rem .55rem; border-radius: calc(var(--radius) - .2rem);
+              color: hsl(var(--muted-fg)); text-decoration: none; }
+  nav.toc a:hover { background: hsl(var(--muted)); color: hsl(var(--fg)); }
+  nav.toc a .n { font-family: var(--mono); font-size: .72rem; opacity: .8; }
+  @media (max-width: 900px) {
+    nav.toc { position: static; max-height: none; border: 1px solid hsl(var(--border));
+              border-radius: var(--radius); padding: .8rem; background: hsl(var(--card)); }
+    nav.toc a { display: inline-flex; }
+  }
+
+  /* ---------- header ---------- */
+  header.app { margin-bottom: 2rem; }
+  header.app h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 .35rem;
+                  letter-spacing: -.025em; font-weight: 650; }
+  header.app .sub { color: hsl(var(--muted-fg)); font-family: var(--mono); font-size: .78rem; }
+  header.app .goal { margin: .9rem 0 0; color: hsl(var(--muted-fg)); max-width: 62ch; }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+           gap: .6rem; margin: 1.4rem 0 0; }
+  .fact { border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+          padding: .6rem .75rem; background: hsl(var(--card)); box-shadow: var(--shadow); }
+  .fact .k { font-size: .65rem; text-transform: uppercase; letter-spacing: .07em;
+             color: hsl(var(--muted-fg)); font-weight: 600; }
+  .fact .v { font-size: 1rem; font-weight: 600; margin-top: .15rem; overflow-wrap: anywhere; }
+
+  /* ---------- breadth-first overview ---------- */
+  .glance { border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+            background: hsl(var(--card)); overflow: hidden; box-shadow: var(--shadow); }
+  .glance a.row { display: grid; grid-template-columns: 12.5rem minmax(0,1fr) auto;
+                  gap: 1rem; align-items: baseline; padding: .62rem .9rem;
+                  border-top: 1px solid hsl(var(--border)); text-decoration: none;
+                  color: inherit; }
+  .glance a.row:first-child { border-top: none; }
+  .glance a.row:hover { background: hsl(var(--muted)); }
+  .glance .t { font-weight: 550; }
+  .glance .s { color: hsl(var(--muted-fg)); font-size: .87rem; overflow-wrap: anywhere; }
+  @media (max-width: 700px) {
+    .glance a.row { grid-template-columns: 1fr; gap: .15rem; }
+  }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 2.5rem; scroll-margin-top: 1.5rem; }
+  section > h2 { font-size: 1.08rem; margin: 0; font-weight: 600; letter-spacing: -.015em;
+                 display: flex; align-items: baseline; gap: .55rem; flex-wrap: wrap; }
+  section > h2 .skill { font-family: var(--mono); font-size: .7rem; font-weight: 500;
+                        color: hsl(var(--accent)); }
+  section > h2 a.top { margin-left: auto; font-size: .68rem; font-weight: 500;
+                       color: hsl(var(--muted-fg)); text-decoration: none; }
+  section > h2 a.top:hover { color: hsl(var(--fg)); }
+  p.summary { margin: .45rem 0 0; color: hsl(var(--fg)); }
+  p.lead { margin: .35rem 0 0; color: hsl(var(--muted-fg)); font-size: .88rem; max-width: 78ch; }
+  .panel { border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+           background: hsl(var(--card)); box-shadow: var(--shadow);
+           margin-top: .85rem; overflow: hidden; }
+  .panel > table { margin: 0; }
+  h3 { font-size: .9rem; margin: 1.25rem 0 .3rem; font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; font-size: .865rem; }
+  th, td { text-align: left; padding: .5rem .9rem; vertical-align: top;
+           border-top: 1px solid hsl(var(--border)); }
+  thead th { font-size: .66rem; text-transform: uppercase; letter-spacing: .07em;
+             color: hsl(var(--muted-fg)); font-weight: 600; border-top: none;
+             background: hsl(var(--muted)); }
+  tbody tr:first-child td, tbody tr:first-child th { border-top: 1px solid hsl(var(--border)); }
+  table tbody th { font-weight: 500; color: hsl(var(--muted-fg)); width: 15rem; }
+  code, .mono { font-family: var(--mono); font-size: .85em; }
+
+  .chip { display: inline-block; padding: .05rem .42rem; border-radius: 999px;
+          border: 1px solid currentColor; font-size: .67rem; font-weight: 600;
+          letter-spacing: .02em; white-space: nowrap; vertical-align: baseline; }
+  .s-ok, .s-pass { color: hsl(var(--ok)); }
+  .s-blocker, .s-high, .s-fail { color: hsl(var(--bad)); }
+  .s-major { color: hsl(var(--warn)); }
+  .s-minor, .s-medium, .s-warn { color: hsl(var(--warn)); }
+  .s-note, .s-low, .s-info { color: hsl(var(--muted-fg)); }
+
+  /* ---------- findings: one line each, detail on demand ---------- */
+  details.f { border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+              background: hsl(var(--card)); margin-top: .4rem; }
+  details.f > summary { display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap;
+                        padding: .5rem .75rem; border: none; border-radius: var(--radius);
+                        background: none; font-size: .875rem; }
+  details.f > summary:hover { background: hsl(var(--muted)); }
+  details.f .fid { font-family: var(--mono); font-size: .74rem;
+                   color: hsl(var(--muted-fg)); }
+  details.f .ft { font-weight: 550; color: hsl(var(--fg)); margin-right: auto; }
+  details.f .fb { padding: 0 .75rem .7rem 2.4rem; }
+  details.f .obs { margin: 0 0 .5rem; font-size: .875rem; color: hsl(var(--fg)); }
+  details.f dl { margin: 0; display: grid; grid-template-columns: 8.5rem 1fr;
+                 gap: .18rem .9rem; font-size: .82rem; }
+  details.f dt { color: hsl(var(--muted-fg)); font-size: .66rem; text-transform: uppercase;
+                 letter-spacing: .06em; padding-top: .18rem; }
+  details.f dd { margin: 0; overflow-wrap: anywhere; color: hsl(var(--fg)); }
+
+  /* ---------- compact visuals ---------- */
+  .bar { display: flex; height: 7px; border-radius: 999px; overflow: hidden;
+         background: hsl(var(--muted)); margin-top: .8rem; }
+  .bar .seg { display: block; background: currentColor; }
+  .legend { margin: .45rem 0 0; font-size: .8rem; display: flex; gap: .4rem;
+            align-items: baseline; flex-wrap: wrap; }
+  .legend .muted { color: hsl(var(--muted-fg)); }
+  .dots { display: flex; gap: 4px; flex-wrap: wrap; margin-top: .8rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor;
+         cursor: help; }
+  .hbar { display: grid; grid-template-columns: 2.2rem 1fr 4.2rem; gap: .6rem;
+          align-items: center; font-size: .8rem; padding: .13rem 0; }
+  .hbar .hl { color: hsl(var(--muted-fg)); }
+  .hbar .hv { text-align: right; font-family: var(--mono); font-size: .75rem; }
+  .hbar .track { height: 7px; border-radius: 999px; background: hsl(var(--muted));
+                 overflow: hidden; }
+  .hbar .fill { display: block; height: 100%; background: hsl(var(--accent)); }
+
+  ul.tight { margin: .4rem 0 0; padding-left: 1.1rem; }
+  ul.tight li { margin: .22rem 0; }
+
+  details { margin-top: .7rem; }
+  details > summary { cursor: pointer; color: hsl(var(--muted-fg)); font-size: .8rem;
+                      padding: .3rem .55rem; border: 1px solid hsl(var(--border));
+                      border-radius: calc(var(--radius) - .2rem); display: inline-block;
+                      background: hsl(var(--card)); list-style: none; user-select: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: "▸ "; }
+  details[open] > summary::before { content: "▾ "; }
+  details > summary:hover { color: hsl(var(--fg)); border-color: hsl(var(--ring)); }
+  pre { background: hsl(var(--muted)); border: 1px solid hsl(var(--border));
+        border-radius: var(--radius); padding: .7rem .8rem; overflow-x: auto;
+        font-family: var(--mono); font-size: .76rem; line-height: 1.45; margin: .5rem 0 0; }
+
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+           gap: .8rem; margin-top: .85rem; }
+  .shots figure { margin: 0; }
+  .shots img { width: 100%; border: 1px solid hsl(var(--border));
+               border-radius: calc(var(--radius) - .1rem); display: block; }
+  .shots figcaption { font-family: var(--mono); font-size: .69rem;
+                      color: hsl(var(--muted-fg)); margin-top: .3rem; overflow-wrap: anywhere; }
+
+  footer { margin-top: 3.5rem; padding-top: 1.1rem; border-top: 1px solid hsl(var(--border));
+           color: hsl(var(--muted-fg)); font-size: .78rem; max-width: 80ch; }
+  a { color: hsl(var(--accent)); }
+
+  @media print {
+    .shell { display: block; max-width: none; padding: 0; }
+    nav.toc, section > h2 a.top { display: none; }
+    body { font-size: 10.5pt; }
+    section, .finding, .fact, .panel, table { break-inside: avoid; }
+    details { display: none; }
+    .glance a.row { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="toc">
+<p class="lbl">Report</p>
+{{NAV}}
+</nav>
+<main>
+{{BODY}}
+<footer>{{GENERATED}}</footer>
+</main>
+</div>
+</body>
+</html>

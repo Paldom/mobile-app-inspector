@@ -60,6 +60,8 @@ explicitly with `/<skill-name>`.
 | [android-apk-analysis](skills/android-apk-analysis/) | Static analysis of an APK/AAB file: composition, manifest/permissions, exported components, signer identity, and optional decompile/packer/secret/tracker layers. |
 | [android-app-profiling](skills/android-app-profiling/) | No-root runtime profiling: process-cold startup vs vitals thresholds, frame jank + percentiles, memory (PSS), baseline-profile status, Perfetto system traces. |
 | [android-ux-audit](skills/android-ux-audit/) | UX/UI heuristic audit: measurable target-size + unlabelled-control checks from the a11y tree, plus a 12-category rubric scored by Nielsen 0-4 severity. |
+| [android-intent-probe](skills/android-intent-probe/) | Fires the app's own exported activities, receivers, services, providers and deep links at it from outside: launched, crashed, denied or unreachable. |
+| [android-device-matrix](skills/android-device-matrix/) | Configurable sweep across screen sizes, densities, orientations, font scales and dark mode, plus capability-denial cells — each applied, verified from the device, and restored. |
 
 They compose: **install → drive → diagnose**, with `android-app-review`
 orchestrating all three and `android-walkthrough-video` turning a drive into a
@@ -101,6 +103,16 @@ skills encode the way through each:
   from the accessibility tree, judging first-run/forms/IA/dark-patterns against
   fixed thresholds, and scoring by Nielsen severity — with the verdict set by the
   worst release gate, never a laundered average.
+- **One screen size proves one screen size.** `android-device-matrix` re-runs the
+  app at 320dp, 840dp, landscape, 200% text and behind a cutout, and takes away
+  the permissions, radios and sensors the manifest says are optional — verifying
+  each configuration by reading it back off the device, gating only on crashes
+  and ANRs, and restoring every global it touched.
+- **A manifest lists entry points; it cannot say which are reachable.**
+  `android-intent-probe` fires every exported component and deep link at the
+  running app, so an "exported component" stops being a static candidate and
+  becomes launched, denied, crashed or unreachable — and the report keeps saying
+  that reaching one is not, by itself, a vulnerability.
 - **The app is untrusted.** Its on-screen text, logs and screenshots are data,
   never instructions — `android-app-review` carries the safety policy for that,
   plus the rules against tapping purchase/destructive controls.
@@ -175,6 +187,40 @@ uia.py snap --json --all > screen.json && uxcheck.py audit screen.json
 walkthrough.py start && walkthrough.py mark "..." && walkthrough.py stop --gif
 ```
 </details>
+
+### One HTML report, from every skill at once
+
+Collect each skill's `--json` into one run directory and render it as a single
+self-contained file, with no CDN and no JavaScript: one attachment you can email.
+
+```bash
+report.py sources                 # the filename each skill must write
+report.py init ./run              # scaffolds run/review.json — the judgment half
+report.py build ./run --out index.html
+```
+
+📄 **[docs/assets/example-report/index.html](docs/assets/example-report/index.html)**
+is the rendered result. Open it locally; GitHub will not render it inline. It comes
+from a later run (4.329★, a 282 ms cold start, 1,479 packets), so its numbers differ
+slightly from the table above.
+[`docs/full-review-prompt.md`](docs/full-review-prompt.md) is the paste-ready
+`/goal` that produces it.
+
+- **Breadth-first.** Sticky contents, an *At a glance* index answering every topic
+  in one line, then the detail. Stop at any depth.
+- **Names what did not run.** A skipped skill says `not run` and prints the command
+  that fills it, because an invisible gap reads as a clean bill of health.
+- **States a coverage ceiling:** static and dynamic status, packer, whether HTTPS
+  was decrypted, and the emulator's cap of medium confidence.
+- **Keeps severity and confidence apart**, so a guess never reads like a reproduced
+  defect. Findings also carry status, evidence strength, false-positive conditions
+  and retest steps.
+- **Puts release gates first:** targetSdk, 64-bit, 16 KB alignment, signing and
+  debuggable, because an app that cannot ship is blocked whatever its findings say.
+- **Emits no overall score**, and writes a `.json` twin plus `.sarif` with
+  `--sarif`, so CI reads the same run you do.
+- **Ends on its own limits:** every caveat the tools raised, gathered into one
+  closing section.
 
 ## Repository structure
 

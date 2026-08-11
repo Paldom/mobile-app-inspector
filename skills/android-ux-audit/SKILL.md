@@ -28,6 +28,11 @@ screen-reader flow) are judgment against the rubric in `references/heuristics.md
 - Startup/jank/memory numbers → `android-app-profiling`.
 - Permissions/version/crashes → `android-package-diagnostics`.
 - Tapping/reading a screen → `android-ui-driver`. Web-page a11y → a web tool.
+- Other screen sizes, landscape, 200% text, or a missing capability →
+  `android-device-matrix`. It emits an `android-ui-driver` snapshot per cell, so
+  audit those files directly with `uxcheck.py audit <cell>.json --density <dpi>`:
+  target sizes are computed in dp, so a control that passes at one density can
+  fail at another.
 
 **Precedence:** an explicit UX / usability / accessibility request routes here; a
 broad "review this app end to end" routes to `android-app-review`, which may

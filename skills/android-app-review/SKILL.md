@@ -16,6 +16,7 @@ sibling skills, and you should invoke them rather than re-deriving their command
 | provision, launch | `play-store-app-install` |
 | observe, act, screenshot, assert | `android-ui-driver` |
 | version, permissions, crashes, memory | `android-package-diagnostics` |
+| other screen sizes, landscape, big text, missing capability | `android-device-matrix` |
 
 ## When NOT to use
 
@@ -24,6 +25,9 @@ sibling skills, and you should invoke them rather than re-deriving their command
 - A dedicated UX/usability/accessibility heuristic audit (severity-scored
   findings, touch targets, dark patterns) → `android-ux-audit` (invoke it as
   the UX step of a review).
+- "Does it work on a tablet / in landscape / at 200% text / without the camera?"
+  → `android-device-matrix`; audit its per-cell snapshots with `android-ux-audit`
+  rather than reviewing only the one screen size you happened to launch.
 - Reviewing code, a diff, or a pull request → ordinary code review.
 - Summarising what *users* said on the Play listing → that is web research.
 - iOS apps → App Store apps cannot be installed on the iOS Simulator at all;
@@ -97,19 +101,36 @@ These are not optional; a review runs an untrusted third-party app.
    pkgdiag.py permissions <pkg>     # what ended up granted
    ```
 
-7. **Write the report** using `assets/report-template.md`. Every finding cites a
-   screenshot filename or a quoted `snap`/`text` line. End with an explicit
-   coverage statement: what you reached, and what you did not, and why.
+7. **Write the report.** For a review you drove by hand, fill
+   `assets/report-template.md`. When other skills also ran — a listing, an APK
+   scan, profiling, a capture, UX audits — build the HTML report instead, so the
+   evidence and the judgment arrive in one file:
+
+   ```bash
+   report.py sources                 # the filenames each skill must write
+   report.py init ./run              # scaffolds run/review.json — the judgment half
+   # fill in coverage, findings and limits, then:
+   report.py build ./run --out review.html
+   ```
+
+   Collect every skill's `--json` into one run directory under the filenames
+   `sources` prints. The generator renders what it finds and lists what it does
+   not, so a skill you skipped shows as **not run** with the command that would
+   fill the gap. Either way every finding cites a screenshot filename or a quoted
+   `snap`/`text` line, and the report ends with what you did not reach, and why.
 
 ## Output spec
 
-- A markdown report following the template: metadata → coverage → findings →
-  permissions → stability/performance → limits.
+- One report: `report.py build` (self-contained HTML, evidence + judgment) or the
+  markdown template — metadata → coverage → findings → permissions →
+  stability/performance → limits.
 - A numbered screenshot per distinct screen, in one directory.
 - Findings that are **observations with evidence**, not impressions. "Crashed on
   rotate (12-settings.png, `crashes` shows FATAL EXCEPTION)" — not "feels unstable".
 - An honest limits section. A review that skipped 60% of the app behind a login
   is useful *if it says so*.
+- **No overall score.** The verdict is the worst unresolved finding; an average
+  launders a blocker into a comfortable number. The generator emits none.
 
 ## Gotchas
 
@@ -132,6 +153,18 @@ These are not optional; a review runs an untrusted third-party app.
 - **Budget the wall-clock.** Each `snap` costs ~2 s; a 25-step crawl with
   screenshots is minutes, not seconds. Say so before starting a deep review.
 
+- **Screenshots and logs carry whatever was on the device.** The HTML report
+  embeds them, so read every frame before sharing it. A frame that caught an
+  account, an email or a payment detail gets deleted, not redacted — and the run
+  re-taken. Anything captured while another app held the foreground is evidence
+  about the device, not about the app under review.
+
 ## Files
 
-- `assets/report-template.md` — the report shape to fill in.
+- `scripts/report.py` — `sources` / `init` / `build`: renders one self-contained
+  HTML report from every skill's output. Offline `--self-test`.
+- `assets/report-template.html` — the HTML shell the generator fills; edit its CSS
+  to rebrand, or pass `--template`.
+- `assets/report-template.md` — the markdown report shape, for a hand-driven review.
+- `assets/review.example.json` — a filled judgment half from a real run, as a model
+  for the one `init` scaffolds.

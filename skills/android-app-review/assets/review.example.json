@@ -1,0 +1,179 @@
+{
+ "app": {
+  "label": "Wikipedia",
+  "package": "org.wikipedia"
+ },
+ "goal": "Pre-release check of the Wikipedia Android app: what it ships, how fast it starts, what it sends, and whether anyone using a screen reader can navigate it.",
+ "environment": {
+  "device": "emulator-5554 · sdk_gphone64_arm64 · google_apis_playstore arm64-v8a",
+  "androidVersion": "Android 15 (API 35)",
+  "locale": "en-US",
+  "date": "2026-08-10"
+ },
+ "budget": "4 screens, ~12 UI steps, no login",
+ "coverage": {
+  "reached": [
+   {
+    "screenshot": "01-feed.png",
+    "screen": "Explore feed (Community tab)",
+    "reachedBy": "cold launch"
+   },
+   {
+    "screenshot": "02-search.png",
+    "screen": "Search",
+    "reachedBy": "bottom nav → Search"
+   },
+   {
+    "screenshot": "03-more.png",
+    "screen": "More menu (navigation drawer)",
+    "reachedBy": "bottom nav → More"
+   },
+   {
+    "screenshot": "04-saved.png",
+    "screen": "Saved / reading lists",
+    "reachedBy": "bottom nav → Saved"
+   }
+  ],
+  "notReached": [
+   "Article reading view and its toolbar — the crawl stayed on the four top-level tabs to keep the run bounded.",
+   "Editing, watchlist and contribution flows — gated behind a Wikipedia account; no credentials were entered, by policy.",
+   "Settings sub-screens, language switching and offline downloads — outside this run's budget.",
+   "First-run onboarding — already dismissed on this device, so it could not be re-observed without a data clear.",
+   "Anything a purchase, sign-out or delete control would have opened — never tapped, by policy."
+  ]
+ },
+ "findings": [
+  {
+   "id": "F1",
+   "title": "Every row of the navigation drawer is unlabelled in the accessibility tree",
+   "severity": "major",
+   "observed": "All five drawer rows — account, games, places, settings, donate — are actionable containers that expose no accessible name, even though each renders visible text on screen. Two icon-only controls on the Explore feed (the bookmark and share buttons on the featured card) are unlabelled the same way.",
+   "evidence": "ux-03-more.json UX-001…UX-005 (ids main_drawer_account_container, _games_hub_, _places_, _settings_, _donate_); ux-01-feed.json UX-001–UX-002 at bounds [743,1064,869,1190] and [880,1064,1006,1190]; screens/03-more.png, screens/01-feed.png.",
+   "steps": "cold launch → More → read the accessibility tree; then Home → read the featured card",
+   "expected": "Each actionable row announces its own name. Read this as SUSPECTED, not proven: the snapshot folds child text into the nearest clickable ancestor, so the visible labels may be attached to a parent rather than genuinely missing. TalkBack is the only test that settles it.",
+   "emulatorCaveat": "no — the accessibility tree is the same surface TalkBack reads on a device",
+   "confidence": "medium",
+   "status": "candidate",
+   "source": "android-ux-audit",
+   "masvs": "MASVS-PLATFORM-1",
+   "mobileTop10": "M8: Security Misconfiguration",
+   "falsePositiveIf": "the snapshot folded each row's visible text into a clickable ancestor, so the name exists but is attached higher up the tree",
+   "retest": "enable TalkBack, swipe through the drawer, and confirm each row is announced by name"
+  },
+  {
+   "id": "F2",
+   "title": "The binary under review is signed by F-Droid, not by Wikimedia",
+   "severity": "note",
+   "observed": "The installed APK verifies cleanly (v1+v2+v3) but its certificate is CN=FDroid, O=fdroid.org — this is F-Droid's rebuild, not the artifact Google Play ships.",
+   "evidence": "apkscan.json signer.signerDN; pkgdiag.json reports installer '(none — sideloaded or preinstalled)'.",
+   "steps": "pull the installed APK → apkscan.py report",
+   "expected": "A signature that verifies proves the file was not altered after signing; it says nothing about who the signer is. Compare the certificate against a fingerprint you trust before calling this 'the Wikipedia app'.",
+   "emulatorCaveat": "no",
+   "confidence": "confirmed",
+   "status": "confirmed",
+   "source": "android-apk-analysis",
+   "masvs": "MASVS-CODE-1",
+   "falsePositiveIf": "you intended to review the F-Droid redistribution rather than the Play build",
+   "retest": "pull the Play build and compare its certificate SHA-256 against Wikimedia's published fingerprint"
+  },
+  {
+   "id": "F3",
+   "title": "Store and device disagree on the version under review",
+   "severity": "note",
+   "observed": "The Play listing advertises 50600-r-2026-07-28 while the device runs 50598-r-2026-07-13, so store-side numbers in this report describe a slightly newer build than the one measured.",
+   "evidence": "listing.json listingVersion vs pkgdiag.json versionName/versionCode.",
+   "steps": "listing.py details → pkgdiag.py report",
+   "expected": "Any comparison between store metrics and on-device behaviour should name both versions rather than implying a single build.",
+   "emulatorCaveat": "no",
+   "confidence": "confirmed",
+   "status": "confirmed",
+   "source": "play-store-listing",
+   "falsePositiveIf": "the listing was mid-rollout and the store version had not propagated",
+   "retest": "re-read both after the next store update and confirm they converge"
+  },
+  {
+   "id": "F4",
+   "title": "Jank rate reads poor, but the sample is far too small to act on",
+   "severity": "minor",
+   "observed": "gfxinfo reported 13 janky frames out of 31 (41.9%) across the short tab-to-tab drive, which the thresholds score as 'poor'. The p90 frame time of 2.3 s is dominated by first-draw work, not steady-state scrolling.",
+   "evidence": "frames.json — totalFrames 31, jankyFrames 13, verdict poor.",
+   "steps": "drive four tabs → profile.py frames",
+   "expected": "A 31-frame window on an emulator is a smoke signal, not a measurement. Re-run on physical hardware over a scripted scroll before treating this as a regression.",
+   "emulatorCaveat": "yes — emulator rendering is not device-grade, and the window is tiny",
+   "confidence": "low",
+   "status": "candidate",
+   "source": "android-app-profiling",
+   "falsePositiveIf": "the 31-frame window is dominated by first-draw work rather than steady-state scrolling — which it is",
+   "retest": "scripted 30-second scroll on physical hardware, gfxinfo reset first, several hundred frames"
+  },
+  {
+   "id": "F5",
+   "title": "Analytics endpoint dominates the app's network chatter",
+   "severity": "note",
+   "observed": "During the capture, intake-analytics.wikimedia.org drew 138 DNS lookups — an order of magnitude more than the content hosts en.wikipedia.org (10) and meta.wikimedia.org (4) — and its own TLS SNI confirms the app reached it directly.",
+   "evidence": "hosts.json dnsQueries and tlsServerNames; 1,479 packets captured, stats.complete true.",
+   "steps": "nettrace.py capture start → drive → capture stop → hosts",
+   "expected": "Worth confirming that beacon rate is intentional. The capture is device-wide, so the Google Play hosts in the same list belong to the OS, not to this app.",
+   "emulatorCaveat": "no",
+   "confidence": "high",
+   "status": "corroborated",
+   "source": "android-network-trace",
+   "masvs": "MASVS-PRIVACY-1",
+   "mobileTop10": "M6: Inadequate Privacy Controls",
+   "falsePositiveIf": "the lookups are retries against a single failing resolver rather than distinct beacons",
+   "retest": "capture again with an idle baseline subtracted and count TLS sessions, not DNS lookups"
+  },
+  {
+   "id": "F6",
+   "title": "System dialogs interrupted the crawl twice and had to be discarded",
+   "severity": "note",
+   "observed": "A Google Play purchase-verification dialog and, later, an external browser sign-in screen took the foreground mid-crawl. Two captured screens were of those overlays rather than of Wikipedia, and were re-taken; the browser frames were destroyed because they carried a real account address.",
+   "evidence": "Re-captured screens/03-more.png and screens/04-saved.png; the discarded frames are not in this report.",
+   "steps": "bottom nav → More → Saved",
+   "expected": "A crawl must check the foreground package every step (uia.py app current) and treat a change as an event, not as app content. Anything captured off-app is evidence about the device, not the app, and may contain personal data.",
+   "emulatorCaveat": "yes — a shared test device accumulates these prompts; a clean snapshot avoids them",
+   "confidence": "confirmed",
+   "status": "confirmed",
+   "source": "android-ui-driver",
+   "falsePositiveIf": "n/a — observed directly, twice",
+   "retest": "re-run from a clean AVD snapshot with no Play prompts pending"
+  },
+  {
+   "id": "F7",
+   "title": "Layout holds across every configuration swept",
+   "severity": "note",
+   "confidence": "high",
+   "status": "confirmed",
+   "source": "android-device-matrix",
+   "observed": "All five cells passed with no crash, ANR or process death: baseline 411x914dp, a 320dp compact phone, landscape, an 840dp tablet width, and 200% font scale.",
+   "evidence": "matrix.json — verdict pass, 0 hard failures across 5 cells, device restored.",
+   "steps": "devmatrix.py run org.wikipedia --profile quick",
+   "expected": "This is a pass, and worth stating: a review that only reports problems cannot show what it checked.",
+   "falsePositiveIf": "wm size/density resize one emulator's logical display — they do not reproduce a real tablet's aspect ratio, a hinge, a cutout you did not enable, or a vendor skin",
+   "retest": "repeat on a purpose-built tablet AVD and on physical hardware",
+   "emulatorCaveat": "yes — resize fidelity is limited, see the matrix section"
+  },
+  {
+   "id": "F8",
+   "title": "Every exported entry point is reachable from any other app, and none of them crashed",
+   "severity": "note",
+   "confidence": "high",
+   "status": "confirmed",
+   "source": "android-intent-probe",
+   "observed": "Firing all 13 exported components from outside: 14 probes launched, 2 services were refused by the platform (BIND_REMOTEVIEWS, BIND_JOB_SERVICE), 1 alias did not resolve, and nothing crashed. The https deep link opens PageActivity for any caller.",
+   "evidence": "intents.json — launched 14, denied 2, not-found 1; no FATAL EXCEPTION in the crash buffer for any probe.",
+   "steps": "apkscan.py report base.apk --json → intentprobe.py run org.wikipedia --go",
+   "expected": "This is what a browser-handling reader app should look like: the reachable surface is content display, and the privileged pieces are permission-gated. Reachability alone is not a defect.",
+   "falsePositiveIf": "a launch only proves the component started — none of these were followed into their post-launch state to see whether any skipped a gate",
+   "retest": "drive each launched component with android-ui-driver and check whether it reaches a state the normal path gates",
+   "emulatorCaveat": "no"
+  }
+ ],
+ "limits": [
+  "Four top-level screens on one device, one locale and one Android version — this is a shape-of-the-app pass, not a release sign-off.",
+  "The reviewed artifact is F-Droid's rebuild of 50598; conclusions do not transfer to the Play build without re-running against it.",
+  "No account was used, so every logged-in surface of the app is unreviewed.",
+  "Crash buffers were not cleared before the run, so 'no crashes' means none left in the ring buffer, not none ever.",
+  "Screenshots in this report were reviewed for personal data before publication; one screen was discarded rather than redacted."
+ ]
+}

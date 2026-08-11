@@ -1,0 +1,201 @@
+{
+ "version": "2.1.0",
+ "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+ "runs": [
+  {
+   "tool": {
+    "driver": {
+     "name": "mobile-app-inspector",
+     "informationUri": "https://github.com/Paldom/mobile-app-inspector",
+     "rules": []
+    }
+   },
+   "results": [
+    {
+     "ruleId": "F1",
+     "level": "error",
+     "message": {
+      "text": "Every row of the navigation drawer is unlabelled in the accessibility tree"
+     },
+     "properties": {
+      "severity": "major",
+      "confidence": "medium",
+      "status": "candidate",
+      "evidence": "ux-03-more.json UX-001\u2026UX-005 (ids main_drawer_account_container, _games_hub_, _places_, _settings_, _donate_); ux-01-feed.json UX-001\u2013UX-002 at bounds [743,1064,869,1190] and [880,1064,1006,1190]; screens/03-more.png, screens/01-feed.png.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F2",
+     "level": "note",
+     "message": {
+      "text": "The binary under review is signed by F-Droid, not by Wikimedia"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "confirmed",
+      "status": "confirmed",
+      "evidence": "apkscan.json signer.signerDN; pkgdiag.json reports installer '(none \u2014 sideloaded or preinstalled)'.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F3",
+     "level": "note",
+     "message": {
+      "text": "Store and device disagree on the version under review"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "confirmed",
+      "status": "confirmed",
+      "evidence": "listing.json listingVersion vs pkgdiag.json versionName/versionCode.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F4",
+     "level": "warning",
+     "message": {
+      "text": "Jank rate reads poor, but the sample is far too small to act on"
+     },
+     "properties": {
+      "severity": "minor",
+      "confidence": "low",
+      "status": "candidate",
+      "evidence": "frames.json \u2014 totalFrames 31, jankyFrames 13, verdict poor.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F5",
+     "level": "note",
+     "message": {
+      "text": "Analytics endpoint dominates the app's network chatter"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "high",
+      "status": "corroborated",
+      "evidence": "hosts.json dnsQueries and tlsServerNames; 1,479 packets captured, stats.complete true.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F6",
+     "level": "note",
+     "message": {
+      "text": "System dialogs interrupted the crawl twice and had to be discarded"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "confirmed",
+      "status": "confirmed",
+      "evidence": "Re-captured screens/03-more.png and screens/04-saved.png; the discarded frames are not in this report.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F7",
+     "level": "note",
+     "message": {
+      "text": "Layout holds across every configuration swept"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "high",
+      "status": "confirmed",
+      "evidence": "matrix.json \u2014 verdict pass, 0 hard failures across 5 cells, device restored.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "F8",
+     "level": "note",
+     "message": {
+      "text": "Every exported entry point is reachable from any other app, and none of them crashed"
+     },
+     "properties": {
+      "severity": "note",
+      "confidence": "high",
+      "status": "confirmed",
+      "evidence": "intents.json \u2014 launched 14, denied 2, not-found 1; no FATAL EXCEPTION in the crash buffer for any probe.",
+      "confidenceCeiling": "medium"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "org.wikipedia"
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

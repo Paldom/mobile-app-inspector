@@ -28,6 +28,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -251,6 +252,87 @@ def manifest_posture(apk: str) -> dict:
     }
 
 
+BOOL_TRUE = ("=true", "0xffffffff", ")-1")
+
+
+def _attr(line: str, name: str) -> str | None:
+    m = re.search(rf'android:{name}\([^)]*\)="([^"]*)"', line)
+    return m.group(1) if m else None
+
+
+def exported_inventory(apk: str) -> dict:
+    """Name every exported component and the deep links it claims.
+
+    `manifest_posture` counts them; a count cannot be probed. This walks the same
+    aapt2 xmltree by indentation so each component carries its own name, actions
+    and URI schemes — the input `android-intent-probe` fires at the running app to
+    find out whether an exported entry point is actually reachable.
+    """
+    aapt2 = _sdk_tool("aapt2")
+    if not aapt2:
+        return {"status": "skipped", "reason": "aapt2 not found"}
+    r = run([aapt2, "dump", "xmltree", "--file", "AndroidManifest.xml", apk])
+    if r.returncode != 0:
+        return {"status": "failed", "reason": r.stderr.strip()[:200]}
+
+    comps, cur, cur_indent, in_filter = [], None, -1, False
+    for line in r.stdout.splitlines():
+        indent = len(line) - len(line.lstrip())
+        s = line.strip()
+        m = re.match(r"E: (activity|activity-alias|service|receiver|provider)\b", s)
+        if m:
+            cur = {"type": m.group(1).replace("activity-alias", "activity"),
+                   "name": None, "exported": None, "permission": None,
+                   "authorities": None, "actions": [], "schemes": [],
+                   "hosts": [], "paths": []}
+            comps.append(cur)
+            cur_indent, in_filter = indent, False
+            continue
+        if cur is None:
+            continue
+        if s.startswith("E: ") and indent <= cur_indent:
+            cur = None                      # left this component's subtree
+            continue
+        if s.startswith("E: intent-filter"):
+            in_filter = True
+        elif s.startswith("A: "):
+            if cur["name"] is None and (v := _attr(s, "name")) and not in_filter:
+                cur["name"] = v
+            if "android:exported(" in s:
+                cur["exported"] = any(t in s for t in BOOL_TRUE)
+            if (v := _attr(s, "permission")) and cur["permission"] is None:
+                cur["permission"] = v
+            if v := _attr(s, "authorities"):
+                cur["authorities"] = v
+            if in_filter:
+                if (v := _attr(s, "name")) and v.startswith("android.intent.action"):
+                    cur["actions"].append(v)
+                elif (v := _attr(s, "name")) and "." in v:
+                    cur["actions"].append(v)
+                if v := _attr(s, "scheme"):
+                    cur["schemes"].append(v)
+                if v := _attr(s, "host"):
+                    cur["hosts"].append(v)
+                for pa in ("pathPrefix", "path", "pathPattern"):
+                    if v := _attr(s, pa):
+                        cur["paths"].append(v)
+
+    for c in comps:
+        # An intent filter implies exported when the attribute is absent, except on
+        # API 31+ where it must be declared. Report None as "unknown", never false.
+        if c["exported"] is None and c["actions"]:
+            c["exported"] = True
+            c["exportedInferred"] = True
+        for k in ("actions", "schemes", "hosts", "paths"):
+            c[k] = sorted(set(c[k]))
+    named = [c for c in comps if c["name"]]
+    return {"status": "ran", "components": named,
+            "exportedNames": [c["name"] for c in named if c["exported"]],
+            "note": "exported=true (or an intent-filter with no explicit attribute). "
+                    "An exported component is an entry point, not a vulnerability — "
+                    "probe it before reporting anything about it."}
+
+
 def heuristic_packer(apk: str) -> dict:
     """Stdlib packer/obfuscator heuristic for when apkid is absent. Flags known
     packer native libs and an unusually low dex count with large encrypted-looking
@@ -270,6 +352,137 @@ def heuristic_packer(apk: str) -> dict:
             "suspected": bool(hits),
             "note": "heuristic only — install apkid for authoritative packer/"
                     "obfuscator detection (--layers packer)"}
+
+
+# Play publishing deadlines, as dated policy rather than folklore. Update these
+# when Google moves them; every gate below states the date it enforces.
+TARGET_SDK_FLOOR = 35            # required for new apps and updates (from 2025-08-31)
+PAGE_ALIGN_BYTES = 16 * 1024     # 16 KB ELF LOAD alignment, required from 2025-11-01
+
+
+def play_readiness(apk: str, man: dict, post: dict, sign: dict, comp: dict) -> dict:
+    """Deterministic Play publishing gates: pass/fail, no judgement, no score.
+
+    These outrank security triage in a review — an app that cannot be published is
+    blocked regardless of how its findings are ranked. Every gate is read from the
+    binary, so none of them is an opinion.
+    """
+    gates = []
+
+    def gate(name, status, detail):
+        gates.append({"gate": name, "status": status, "detail": detail})
+
+    tgt = man.get("targetSdk")
+    try:
+        tgt_i = int(str(tgt))
+    except (TypeError, ValueError):
+        tgt_i = None
+    if tgt_i is None:
+        gate("targetSdk", "unknown", "targetSdk not readable (aapt2 missing?)")
+    else:
+        gate("targetSdk", "pass" if tgt_i >= TARGET_SDK_FLOOR else "fail",
+             f"targets API {tgt_i}; Play requires >= {TARGET_SDK_FLOOR} for new apps "
+             f"and updates (since 2025-08-31)")
+
+    abis = comp.get("nativeAbis") or []
+    if not abis:
+        gate("64-bit native code", "pass", "no native code — the requirement does not apply")
+    elif "arm64-v8a" in abis:
+        gate("64-bit native code", "pass", f"ships arm64-v8a (ABIs: {', '.join(abis)})")
+    else:
+        gate("64-bit native code", "fail",
+             f"native code without arm64-v8a (ABIs: {', '.join(abis)})")
+
+    align = native_page_alignment(apk)
+    gate("16 KB page alignment", align["status"], align["detail"])
+
+    schemes = sign.get("schemes") or {}
+    if not schemes:
+        gate("Signing scheme", "unknown", sign.get("reason") or sign.get("error")
+             or "signer not read")
+    elif any(schemes.get(k) for k in ("v2", "v3", "v3.1", "v4")):
+        # v1 alongside v2/v3 is a backward-compatibility artefact, not the Janus bug.
+        gate("Signing scheme", "pass",
+             "signed with " + ", ".join(k for k, v in schemes.items() if v)
+             + " (v1 alongside v2/v3 is a compatibility artefact, not Janus)")
+    else:
+        gate("Signing scheme", "fail",
+             "v1-only signature — vulnerable to Janus (CVE-2017-13156) and will not "
+             "install on Android 11+")
+
+    if post.get("debuggable") is True:
+        gate("Not debuggable", "fail", "android:debuggable=\"true\" in a shipped build")
+    elif post.get("debuggable") is False:
+        gate("Not debuggable", "pass", "android:debuggable is not set")
+
+    dn = (sign.get("signerDN") or "")
+    if sign.get("debugKey") or "CN=Android Debug" in dn:
+        gate("Release signing key", "fail", "signed with the Android debug certificate")
+    elif dn:
+        gate("Release signing key", "pass", f"signed by {dn.split(',')[0]}")
+
+    failed = [g for g in gates if g["status"] == "fail"]
+    return {"gates": gates, "blocking": len(failed),
+            "note": "Deterministic publishing gates read from the binary. They are "
+                    "release-blocking regardless of security severity, and they carry "
+                    "no score."}
+
+
+def native_page_alignment(apk: str) -> dict:
+    """Are the 64-bit .so LOAD segments 16 KB aligned? (Play, from 2025-11-01.)
+
+    Read straight out of the ELF program headers with stdlib struct — no readelf, no
+    extraction to disk. Only 64-bit ELFs matter; 32-bit ABIs are exempt.
+    """
+    try:
+        z = zipfile.ZipFile(apk)
+    except (OSError, zipfile.BadZipFile):
+        return {"status": "unknown", "detail": "APK not readable as a zip"}
+    bad, checked = [], 0
+    with z:
+        libs = [n for n in z.namelist()
+                if n.startswith("lib/") and n.endswith(".so")
+                and ("arm64-v8a" in n or "x86_64" in n)]
+        for name in libs[:60]:            # a sample is enough to catch a misbuilt lib
+            try:
+                with z.open(name) as fh:
+                    head = fh.read(64)
+                    if head[:4] != b"\x7fELF" or head[4] != 2:
+                        continue          # not a 64-bit ELF
+                    e_phoff = struct.unpack_from("<Q", head, 32)[0]
+                    e_phentsize = struct.unpack_from("<H", head, 54)[0]
+                    e_phnum = struct.unpack_from("<H", head, 56)[0]
+                    if not e_phnum or e_phoff <= 0:
+                        continue
+                    need = e_phoff + e_phentsize * e_phnum
+                    if need > 4 * 1024 * 1024:
+                        continue          # refuse to read an absurd header table
+                    blob = head + fh.read(need - len(head))
+                checked += 1
+                worst = 0
+                for i in range(e_phnum):
+                    off = e_phoff + i * e_phentsize
+                    if off + 56 > len(blob):
+                        break
+                    p_type = struct.unpack_from("<I", blob, off)[0]
+                    if p_type != 1:       # PT_LOAD
+                        continue
+                    p_align = struct.unpack_from("<Q", blob, off + 48)[0]
+                    worst = max(worst, p_align) if worst == 0 else min(worst, p_align)
+                if worst and worst < PAGE_ALIGN_BYTES:
+                    bad.append(f"{name} (align {worst})")
+            except (OSError, struct.error, ValueError):
+                continue
+    if not checked:
+        return {"status": "pass",
+                "detail": "no 64-bit native libraries — the requirement does not apply"}
+    if bad:
+        return {"status": "fail",
+                "detail": f"{len(bad)} of {checked} 64-bit .so files have LOAD segments "
+                          f"below {PAGE_ALIGN_BYTES} bytes: " + "; ".join(bad[:4])}
+    return {"status": "pass",
+            "detail": f"all {checked} 64-bit .so files align LOAD segments to "
+                      f">= {PAGE_ALIGN_BYTES} bytes"}
 
 
 def signer(apk: str) -> dict:
@@ -375,6 +588,7 @@ def cmd_report(a) -> int:
                "inputKind": kind, "composition": composition(apk),
                "manifest": manifest(apk),
                "manifestPosture": manifest_posture(apk),
+               "exportedInventory": exported_inventory(apk),
                "heuristicPacker": heuristic_packer(apk),
                "layers": {}}
         # apksigner on a bundletool-derived universal APK reports bundletool's
@@ -402,6 +616,10 @@ def cmd_report(a) -> int:
                 rep["layers"][name] = {"skipped": "tool timed out"}
         for name, v in rep["layers"].items():          # 3-state status per layer
             v.setdefault("status", "skipped" if "skipped" in v else "ran")
+        # Publishing gates last: they need the manifest, posture and signer above.
+        rep["playReadiness"] = play_readiness(apk, rep["manifest"],
+                                              rep["manifestPosture"], rep["signer"],
+                                              rep["composition"])
         rep["layersSkipped"] = [n for n, v in rep["layers"].items()
                                 if v.get("status") == "skipped"]
         rep["analysisCaveats"] = _caveats(rep)
@@ -623,6 +841,70 @@ def self_test() -> int:
     sample = "minSdkVersion:'23'\ntargetSdkVersion:'30'"
     check("minSdk regex does not match targetSdkVersion",
           _re.search(r"(?:^|\n)minSdkVersion:'(\d+)'", sample).group(1) == "23")
+
+    # ---- Play publishing gates: deterministic, and no gate may be an opinion.
+    def gates_of(man, post, sign, comp):
+        return {g["gate"]: g["status"]
+                for g in play_readiness("x.apk", man, post, sign, comp)["gates"]}
+
+    modern = gates_of({"targetSdk": "35"}, {"debuggable": False},
+                      {"schemes": {"v1": True, "v2": True, "v3": True},
+                       "signerDN": "CN=Acme"}, {"nativeAbis": []})
+    check("targetSdk at the floor passes", modern["targetSdk"] == "pass")
+    check("v1+v2/v3 is NOT reported as Janus (the known false positive)",
+          modern["Signing scheme"] == "pass")
+    check("no native code exempts the 64-bit gate",
+          modern["64-bit native code"] == "pass")
+
+    stale = gates_of({"targetSdk": "33"}, {"debuggable": True},
+                     {"schemes": {"v1": True}, "signerDN": "CN=Android Debug",
+                      "debugKey": True},
+                     {"nativeAbis": ["armeabi-v7a"]})
+    check("targetSdk below the floor fails", stale["targetSdk"] == "fail")
+    check("v1-only signing fails (Janus / will not install on 11+)",
+          stale["Signing scheme"] == "fail")
+    check("debuggable release fails", stale["Not debuggable"] == "fail")
+    check("debug certificate fails", stale["Release signing key"] == "fail")
+    check("32-bit-only native code fails", stale["64-bit native code"] == "fail")
+    check("unreadable targetSdk is 'unknown', never a silent pass",
+          gates_of({}, {}, {}, {})["targetSdk"] == "unknown")
+
+    # 16 KB ELF alignment, read from real program headers in a synthetic APK.
+    def elf64(p_align: int) -> bytes:
+        eh = bytearray(64)
+        eh[0:4] = b"\x7fELF"; eh[4] = 2                      # 64-bit
+        struct.pack_into("<Q", eh, 32, 64)                   # e_phoff
+        struct.pack_into("<H", eh, 54, 56)                   # e_phentsize
+        struct.pack_into("<H", eh, 56, 1)                    # e_phnum
+        ph = bytearray(56)
+        struct.pack_into("<I", ph, 0, 1)                     # PT_LOAD
+        struct.pack_into("<Q", ph, 48, p_align)
+        return bytes(eh + ph)
+
+    with tempfile.TemporaryDirectory() as td:
+        good = os.path.join(td, "good.apk")
+        with zipfile.ZipFile(good, "w") as z:
+            z.writestr("lib/arm64-v8a/libok.so", elf64(16384))
+            z.writestr("lib/armeabi-v7a/libold.so", b"not-an-elf")
+        check("16 KB-aligned 64-bit lib passes",
+              native_page_alignment(good)["status"] == "pass")
+
+        bad = os.path.join(td, "bad.apk")
+        with zipfile.ZipFile(bad, "w") as z:
+            z.writestr("lib/arm64-v8a/libbad.so", elf64(4096))
+        check("4 KB-aligned 64-bit lib fails",
+              native_page_alignment(bad)["status"] == "fail")
+
+        pure = os.path.join(td, "pure.apk")
+        with zipfile.ZipFile(pure, "w") as z:
+            z.writestr("classes.dex", b"dex")
+        check("an app with no 64-bit .so is exempt, not failed",
+              native_page_alignment(pure)["status"] == "pass")
+
+    pr = play_readiness("x", {"targetSdk": "35"}, {}, {}, {})
+    check("play readiness emits gates and a blocking count, never a score",
+          set(pr) == {"gates", "blocking", "note"}
+          and all(set(g) == {"gate", "status", "detail"} for g in pr["gates"]))
 
     print(f"RESULT: {'ok' if not fails else 'fail'}")
     return 1 if fails else 0

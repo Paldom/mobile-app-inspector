@@ -149,7 +149,13 @@ class Device:
         return self._user
 
     def screen_size(self) -> tuple[int, int]:
-        m = re.search(r"Physical size:\s*(\d+)x(\d+)", self.shell("wm", "size"))
+        # "Override size" wins when set: `wm size WxH` (and rotation) change what the
+        # app actually lays out against, while "Physical size" stays at the panel's
+        # native resolution. Reporting the physical size under an override makes every
+        # bounds-vs-screen comparison (off-screen, clipped) wrong.
+        out = self.shell("wm", "size")
+        m = (re.search(r"Override size:\s*(\d+)x(\d+)", out)
+             or re.search(r"Physical size:\s*(\d+)x(\d+)", out))
         return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
 
     def current(self) -> str:
