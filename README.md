@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.svg" alt="mobile-app-inspector icon" width="128"/>
+</p>
+
 # Mobile App Inspector
 
 [![CI](https://github.com/Paldom/mobile-app-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/Paldom/mobile-app-inspector/actions/workflows/ci.yml)

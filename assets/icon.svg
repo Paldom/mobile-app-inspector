@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>mobile-app-inspector</title>
+  <path id="bg" d="M 601.62 0 c 147.85 0 221.77 0 278.24 28.77 a 263.99 263.99 0 0 1 115.37 115.37 c 28.77 56.47 28.77 130.39 28.77 278.24 L 1024 601.62 c 0 147.85 0 221.77 -28.77 278.24 a 263.99 263.99 0 0 1 -115.37 115.37 c -56.47 28.77 -130.39 28.77 -278.24 28.77 L 422.38 1024 c -147.85 0 -221.77 0 -278.24 -28.77 a 263.99 263.99 0 0 1 -115.37 -115.37 c -28.77 -56.47 -28.77 -130.39 -28.77 -278.24 L 0 422.38 c 0 -147.85 0 -221.77 28.77 -278.24 a 263.99 263.99 0 0 1 115.37 -115.37 c 56.47 -28.77 130.39 -28.77 278.24 -28.77 Z" fill="#2A2A2E"/>
+  <g id="glyph" fill="#E8E8EA">
+  <rect x="316" y="228" width="392" height="560" rx="52" fill="none" stroke="#E8E8EA" stroke-width="48"/>
+  <rect x="456" y="282" width="112" height="20" rx="10"/>
+  <circle cx="576" cy="556" r="130" fill="#2A2A2E"/>
+  <circle cx="576" cy="556" r="130" fill="none" stroke="#E8E8EA" stroke-width="48"/>
+  <path d="M 668 648 L 772 752" fill="none" stroke="#E8E8EA" stroke-width="48" stroke-linecap="round"/>
+  </g>
+</svg>
