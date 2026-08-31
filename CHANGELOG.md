@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning: [SemVer](https://semver.org) on the plugin manifest
 (breaking skill-interface change → major, new skill → minor, fix → patch).
 
+## [0.3.0] - 2026-08-31
+
+### Added
+- Adopted the current skillskit gate: executed trigger evals scoring every trigger
+  prompt against every skill description (rank-1 routing accuracy 81.1%, up from
+  65.6%), a security scan, ruff lint and format, README-shape validation.
+
+### Changed
+- Skill descriptions sharpened across the catalogue. With twelve same-domain
+  `android-*` skills the shared vocabulary made siblings outrank each other on
+  their own trigger prompts; each fix moved the scope boundary rather than
+  stuffing keywords.
+
+### Fixed
+- `android-app-review/scripts/report.py` used Python 3.12-only f-string syntax
+  (PEP 701 multi-line replacement fields) while the repo supports 3.10 - it would
+  have failed to parse on 3.10 and 3.11. Literals hoisted out of the f-strings.
+- Unclosed file handles, ambiguous `l` identifiers and other findings the new
+  lint gate surfaced in this repo's scripts.
+
 ## [0.2.0] - 2026-08-11
 
 ### Added
