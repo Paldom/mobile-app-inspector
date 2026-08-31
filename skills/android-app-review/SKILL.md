@@ -1,7 +1,7 @@
 ---
 name: android-app-review
 license: MIT
-description: Reviews a whole Android app end to end from a Google Play link - provisions it, explores its screens under a safety policy, captures screenshots, and writes a structured report. Use when asked to review, explore, evaluate, QA, smoke-test, or tear down an entire app rather than do one thing. Not for a single install or tap, a permission or version lookup, or reviewing code.
+description: Reviews a whole Android app end to end from a Google Play link - provisions it, explores its screens under a safety policy, captures screenshots, writes a structured report. Use for a full teardown - explore an app and report what it is like, poke around, QA or smoke-test it, check onboarding and first-run flow, or whether anything looks sketchy. Not for one install or tap, or reading code.
 argument-hint: "<play-store-url | package-name> [what to focus on]"
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: android-device-matrix
 license: MIT
-description: Tests an Android app across screen sizes, densities, orientations, font scales and dark mode, and checks it degrades gracefully when a permission, radio or sensor is missing. Use for tablets, landscape, large text, small screens, or what happens with no camera, network or permission. Not for end-to-end reviews, the touch-target audit itself, or startup performance.
+description: Tests an Android app across screen sizes, densities, orientations, font scales and dark mode, and checks it degrades gracefully when a permission, radio or sensor is missing. Use for tablets, rotation and landscape, large text, small screens, running offline or on mobile data, or what happens with no camera or permission. Not for end-to-end reviews, heuristic usability scoring, or startup performance.
 argument-hint: "<package to sweep>"
 ---
 

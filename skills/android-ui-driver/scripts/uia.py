@@ -12,6 +12,7 @@ someone's real handset.
 
 Exit codes: 0 ok | 1 assertion failed / not found / stale index | 2 usage or device error.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -43,18 +44,24 @@ def find_adb() -> str:
     exe = shutil.which("adb")
     if exe:
         return exe
-    roots = [os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),
-             os.path.expanduser("~/Library/Android/sdk"),
-             os.path.expanduser("~/Android/Sdk"),
-             "/usr/local/share/android-sdk", "/opt/android-sdk"]
+    roots = [
+        os.environ.get("ANDROID_HOME"),
+        os.environ.get("ANDROID_SDK_ROOT"),
+        os.path.expanduser("~/Library/Android/sdk"),
+        os.path.expanduser("~/Android/Sdk"),
+        "/usr/local/share/android-sdk",
+        "/opt/android-sdk",
+    ]
     for root in roots:
         if not root:
             continue
         cand = os.path.join(root, "platform-tools", "adb")
         if os.path.isfile(cand) and os.access(cand, os.X_OK):
             return cand
-    die("adb not found. Install Android platform-tools, or set ANDROID_HOME to "
-        "your SDK (e.g. export ANDROID_HOME=~/Library/Android/sdk).")
+    die(
+        "adb not found. Install Android platform-tools, or set ANDROID_HOME to "
+        "your SDK (e.g. export ANDROID_HOME=~/Library/Android/sdk)."
+    )
 
 
 class Device:
@@ -67,31 +74,40 @@ class Device:
     def _autoselect(self) -> str:
         online = self.list_devices()
         if not online:
-            die("no device. Boot an emulator or connect a phone, then re-run "
-                "(`adb devices` should list it as 'device').")
+            die(
+                "no device. Boot an emulator or connect a phone, then re-run "
+                "(`adb devices` should list it as 'device')."
+            )
         if len(online) > 1:
-            die(f"{len(online)} devices attached: {', '.join(online)}. "
-                "Pass --serial <id> or set ANDROID_SERIAL.")
+            die(
+                f"{len(online)} devices attached: {', '.join(online)}. "
+                "Pass --serial <id> or set ANDROID_SERIAL."
+            )
         only = online[0]
         if not only.startswith("emulator-"):
             self.serial = only  # needed for the getprop below
             chars = self.shell("getprop", "ro.build.characteristics").strip()
             if "emulator" not in chars:
-                die(f"{only} looks like a physical device. Naming it is required so "
+                die(
+                    f"{only} looks like a physical device. Naming it is required so "
                     f"automation cannot touch a real phone by accident: "
-                    f"--serial {only} (or export ANDROID_SERIAL={only}).")
+                    f"--serial {only} (or export ANDROID_SERIAL={only})."
+                )
         return only
 
     def list_devices(self) -> list[str]:
-        out = subprocess.run([self.adb, "devices"], capture_output=True,
-                             text=True, timeout=ADB_TIMEOUT).stdout
-        return [ln.split("\t")[0] for ln in out.splitlines()[1:]
-                if ln.strip() and ln.endswith("\tdevice")]
+        out = subprocess.run(
+            [self.adb, "devices"], capture_output=True, text=True, timeout=ADB_TIMEOUT
+        ).stdout
+        return [
+            ln.split("\t")[0]
+            for ln in out.splitlines()[1:]
+            if ln.strip() and ln.endswith("\tdevice")
+        ]
 
     def run(self, *args: str, binary: bool = False, timeout: int = ADB_TIMEOUT):
         cmd = [self.adb] + (["-s", self.serial] if self.serial else []) + list(args)
-        return subprocess.run(cmd, capture_output=True, timeout=timeout,
-                              text=not binary)
+        return subprocess.run(cmd, capture_output=True, timeout=timeout, text=not binary)
 
     def shell(self, *args: str, timeout: int = ADB_TIMEOUT) -> str:
         # `adb shell` JOINS its arguments and runs the result through the
@@ -115,16 +131,18 @@ class Device:
             time.sleep(0.6 * (attempt + 1))
         remote = "/data/local/tmp/uia-dump.xml"
         self.shell("uiautomator", "dump", remote)
-        raw = (self.run("exec-out", "cat", remote, binary=True).stdout or b"")
+        raw = self.run("exec-out", "cat", remote, binary=True).stdout or b""
         xml = self._trim(raw.decode("utf-8", "replace"))
         if xml:
             return xml
         hint = ""
         if "idle" in last.lower():
-            hint = ("  The screen never went idle (animation, video, or a spinner). "
-                    "Disable animations: adb shell settings put global "
-                    "window_animation_scale 0 (also transition_animation_scale and "
-                    "animator_duration_scale).")
+            hint = (
+                "  The screen never went idle (animation, video, or a spinner). "
+                "Disable animations: adb shell settings put global "
+                "window_animation_scale 0 (also transition_animation_scale and "
+                "animator_duration_scale)."
+            )
         die(f"uiautomator dump failed after {DUMP_RETRIES} tries: {last[:300]}{hint}")
 
     def _dump_once(self) -> str:
@@ -140,7 +158,7 @@ class Device:
         start, end = raw.find("<?xml"), raw.rfind("</hierarchy>")
         if start == -1 or end == -1:
             return ""
-        return raw[start: end + len("</hierarchy>")]
+        return raw[start : end + len("</hierarchy>")]
 
     def user(self) -> str:
         if getattr(self, "_user", None) is None:
@@ -154,16 +172,20 @@ class Device:
         # native resolution. Reporting the physical size under an override makes every
         # bounds-vs-screen comparison (off-screen, clipped) wrong.
         out = self.shell("wm", "size")
-        m = (re.search(r"Override size:\s*(\d+)x(\d+)", out)
-             or re.search(r"Physical size:\s*(\d+)x(\d+)", out))
+        m = re.search(r"Override size:\s*(\d+)x(\d+)", out) or re.search(
+            r"Physical size:\s*(\d+)x(\d+)", out
+        )
         return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
 
     def current(self) -> str:
         """Focused package/activity. Much cheaper than a hierarchy dump."""
         for src in (("dumpsys", "window"), ("dumpsys", "activity", "activities")):
             out = self.shell(*src)
-            m = re.search(r"(?:mCurrentFocus|mResumedActivity)[^\n]*?"
-                          r"([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+)", out)
+            m = re.search(
+                r"(?:mCurrentFocus|mResumedActivity)[^\n]*?"
+                r"([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+)",
+                out,
+            )
             if m:
                 return m.group(1)
         return "?"
@@ -176,9 +198,27 @@ CHECKABLE = ("CheckBox", "Switch", "RadioButton", "ToggleButton", "CheckedTextVi
 
 
 class Node:
-    __slots__ = ("text", "desc", "rid", "cls", "pkg", "clickable", "longclick",
-                 "checkable", "checked", "scrollable", "editable", "password",
-                 "enabled", "selected", "focused", "x1", "y1", "x2", "y2")
+    __slots__ = (
+        "checkable",
+        "checked",
+        "clickable",
+        "cls",
+        "desc",
+        "editable",
+        "enabled",
+        "focused",
+        "longclick",
+        "password",
+        "pkg",
+        "rid",
+        "scrollable",
+        "selected",
+        "text",
+        "x1",
+        "x2",
+        "y1",
+        "y2",
+    )
 
     def __init__(self, el: ET.Element):
         a = el.attrib
@@ -200,13 +240,16 @@ class Node:
         self.focused = a.get("focused") == "true"
         m = BOUNDS.search(a.get("bounds") or "")
         self.x1, self.y1, self.x2, self.y2 = (
-            (int(m.group(i)) for i in (1, 2, 3, 4)) if m else (0, 0, 0, 0))
+            (int(m.group(i)) for i in (1, 2, 3, 4)) if m else (0, 0, 0, 0)
+        )
 
     @property
-    def w(self) -> int: return self.x2 - self.x1
+    def w(self) -> int:
+        return self.x2 - self.x1
 
     @property
-    def h(self) -> int: return self.y2 - self.y1
+    def h(self) -> int:
+        return self.y2 - self.y1
 
     @property
     def center(self) -> tuple[int, int]:
@@ -238,7 +281,7 @@ class Node:
 def parse(xml: str, w: int, h: int) -> list[Node]:
     """Flatten the hierarchy, keeping on-screen nodes only."""
     try:
-        root = ET.fromstring(xml)
+        root = ET.fromstring(xml)  # noqa: S314 - parses a local file the caller supplies; defusedxml would add a runtime dependency a skill must not have
     except ET.ParseError as e:
         die(f"could not parse the UI hierarchy: {e}")
     if root.tag != "hierarchy":
@@ -252,8 +295,12 @@ def parse(xml: str, w: int, h: int) -> list[Node]:
 
 
 def _contains(outer: Node, inner: Node) -> bool:
-    return (outer.x1 <= inner.x1 and outer.y1 <= inner.y1
-            and outer.x2 >= inner.x2 and outer.y2 >= inner.y2)
+    return (
+        outer.x1 <= inner.x1
+        and outer.y1 <= inner.y1
+        and outer.x2 >= inner.x2
+        and outer.y2 >= inner.y2
+    )
 
 
 def compact(nodes: list[Node], limit: int) -> tuple[list[Node], int]:
@@ -264,14 +311,16 @@ def compact(nodes: list[Node], limit: int) -> tuple[list[Node], int]:
     parent so a button appears once, with the parent's correct tap target.
     Returns (rows, total_before_cap) so truncation is never silent.
     """
-    interesting = [n for n in nodes
-                   if n.label or n.actionable or n.scrollable]
+    interesting = [n for n in nodes if n.label or n.actionable or n.scrollable]
 
     for n in interesting:
         if n.label or not n.actionable:
             continue
-        inner = [c for c in interesting
-                 if c is not n and c.label and _contains(n, c) and not c.actionable]
+        inner = [
+            c
+            for c in interesting
+            if c is not n and c.label and _contains(n, c) and not c.actionable
+        ]
         if inner:
             n.text = " / ".join(dict.fromkeys(c.label for c in inner))[:120]
             for c in inner:
@@ -331,7 +380,7 @@ def cache_path(serial: str) -> str:
 
 def snapshot(dev: Device, limit: int) -> tuple[list[Node], int, int, int, str]:
     w, h = dev.screen_size()
-    nodes = parse(dev.dump_xml(), w or 10 ** 6, h or 10 ** 6)
+    nodes = parse(dev.dump_xml(), w or 10**6, h or 10**6)
     els, total = compact(nodes, limit)
     act = dev.current()
     try:
@@ -339,10 +388,23 @@ def snapshot(dev: Device, limit: int) -> tuple[list[Node], int, int, int, str]:
         # holds on-screen text, which can include personal data
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w") as fh:
-            json.dump({"act": act,
-                       "els": [{"i": i, "text": n.text, "desc": n.desc,
-                                "rid": n.rid, "role": n.role, "xy": list(n.center)}
-                               for i, n in enumerate(els)]}, fh)
+            json.dump(
+                {
+                    "act": act,
+                    "els": [
+                        {
+                            "i": i,
+                            "text": n.text,
+                            "desc": n.desc,
+                            "rid": n.rid,
+                            "role": n.role,
+                            "xy": list(n.center),
+                        }
+                        for i, n in enumerate(els)
+                    ],
+                },
+                fh,
+            )
     except OSError:
         pass
     return els, w, h, total, act
@@ -358,6 +420,7 @@ def load_cache(dev: Device) -> dict:
 
 def match(els: list[Node], text=None, rid=None, desc=None) -> list[int]:
     """Exact match first, then case-insensitive substring."""
+
     def hits(pred) -> list[int]:
         return [i for i, n in enumerate(els) if pred(n)]
 
@@ -366,9 +429,9 @@ def match(els: list[Node], text=None, rid=None, desc=None) -> list[int]:
     if desc:
         return hits(lambda n: n.desc == desc) or hits(lambda n: desc.lower() in n.desc.lower())
     if text:
-        return (hits(lambda n: n.text == text or n.desc == text)
-                or hits(lambda n: text.lower() in n.text.lower()
-                        or text.lower() in n.desc.lower()))
+        return hits(lambda n: n.text == text or n.desc == text) or hits(
+            lambda n: text.lower() in n.text.lower() or text.lower() in n.desc.lower()
+        )
     return []
 
 
@@ -379,26 +442,48 @@ def cmd_snap(dev: Device, a) -> int:
     limit = 0 if a.all else a.limit
     els, w, h, total, act = snapshot(dev, limit)
     if a.json:
-        print(json.dumps({"activity": act, "size": [w, h], "total": total,
-                          "shown": len(els), "truncated": total > len(els),
-                          "elements": [{"i": i, "role": n.role, "text": n.text,
-                                        "desc": n.desc, "id": n.rid,
-                                        "center": list(n.center),
-                                        "bounds": [n.x1, n.y1, n.x2, n.y2],
-                                        "enabled": n.enabled, "checked": n.checked,
-                                        "selected": n.selected,
-                                        "password": n.password,
-                                        "scrollable": n.scrollable}
-                                       for i, n in enumerate(els)]}, indent=1))
+        print(
+            json.dumps(
+                {
+                    "activity": act,
+                    "size": [w, h],
+                    "total": total,
+                    "shown": len(els),
+                    "truncated": total > len(els),
+                    "elements": [
+                        {
+                            "i": i,
+                            "role": n.role,
+                            "text": n.text,
+                            "desc": n.desc,
+                            "id": n.rid,
+                            "center": list(n.center),
+                            "bounds": [n.x1, n.y1, n.x2, n.y2],
+                            "enabled": n.enabled,
+                            "checked": n.checked,
+                            "selected": n.selected,
+                            "password": n.password,
+                            "scrollable": n.scrollable,
+                        }
+                        for i, n in enumerate(els)
+                    ],
+                },
+                indent=1,
+            )
+        )
         return 0
-    print(f"act={act} size={w}x{h} n={len(els)}"
-          + (f" TRUNCATED(of {total}, --all for the rest)" if total > len(els) else ""))
+    print(
+        f"act={act} size={w}x{h} n={len(els)}"
+        + (f" TRUNCATED(of {total}, --all for the rest)" if total > len(els) else "")
+    )
     for i, n in enumerate(els):
         print(render(n, i))
     if not els:
-        print("(nothing readable — the app may draw to a canvas (game/Flutter without "
-              "semantics) or the screen may be FLAG_SECURE. Take a screenshot and "
-              "read it visually.)")
+        print(
+            "(nothing readable — the app may draw to a canvas (game/Flutter without "
+            "semantics) or the screen may be FLAG_SECURE. Take a screenshot and "
+            "read it visually.)"
+        )
     return 0
 
 
@@ -409,8 +494,11 @@ def cmd_text(dev: Device, a) -> int:
         for v in (n.text, n.desc):
             if v and v not in seen:
                 seen.append(clip(v, 200))
-    print("\n".join(seen) if seen else
-          "(no text exposed — canvas-drawn app or FLAG_SECURE screen; screenshot it instead)")
+    print(
+        "\n".join(seen)
+        if seen
+        else "(no text exposed — canvas-drawn app or FLAG_SECURE screen; screenshot it instead)"
+    )
     return 0
 
 
@@ -431,24 +519,30 @@ def _resolve(dev: Device, a) -> tuple[int, int, str]:
             die("no cached snapshot — run `snap` before tapping by index")
         now = dev.current()
         if cache.get("act") and now != cache["act"]:
-            print(f"error: the screen changed since that snapshot "
-                  f"({cache['act']} -> {now}); indices are stale. Re-run `snap`.",
-                  file=sys.stderr)
+            print(
+                f"error: the screen changed since that snapshot "
+                f"({cache['act']} -> {now}); indices are stale. Re-run `snap`.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         try:
             e = els[int(a.target)]
         except (ValueError, IndexError):
-            die(f"index {a.target} not in the last snapshot (it had {len(els)} "
-                f"elements); re-run `snap`")
+            die(
+                f"index {a.target} not in the last snapshot (it had {len(els)} "
+                f"elements); re-run `snap`"
+            )
         return e["xy"][0], e["xy"][1], f'{e["role"]} "{e["text"] or e["desc"]}"'
 
     els, _, _, _, _ = snapshot(dev, 0)
     idx = match(els, a.text, a.id, a.desc)
     if not idx:
         labels = [n.label for n in els if n.label][:15]
-        print(f"error: no element matching {sel!r}. On screen now: "
-              f"{', '.join(repr(x) for x in labels) or '(nothing readable)'}",
-              file=sys.stderr)
+        print(
+            f"error: no element matching {sel!r}. On screen now: "
+            f"{', '.join(repr(x) for x in labels) or '(nothing readable)'}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     nth = getattr(a, "nth", None)
     if nth is not None and nth >= len(idx):
@@ -456,13 +550,18 @@ def _resolve(dev: Device, a) -> tuple[int, int, str]:
     if len(idx) > 1 and nth is None and not getattr(a, "first", False):
         # Mutating actions fail closed on ambiguity: a warning does not stop the
         # wrong "Delete" from being tapped. Queries (assert/wait) stay permissive.
-        opts = "; ".join(f"--nth {k}: {els[i].role} "
-                         f"{json.dumps(clip(els[i].label, 40), ensure_ascii=False)} "
-                         f"@{els[i].center[0]},{els[i].center[1]}"
-                         for k, i in enumerate(idx[:6]))
-        print(f"error: {len(idx)} elements match {sel!r} — refusing to guess which "
-              f"to act on. Pick one with --nth N, or --first to take the first. "
-              f"Matches: {opts}", file=sys.stderr)
+        opts = "; ".join(
+            f"--nth {k}: {els[i].role} "
+            f"{json.dumps(clip(els[i].label, 40), ensure_ascii=False)} "
+            f"@{els[i].center[0]},{els[i].center[1]}"
+            for k, i in enumerate(idx[:6])
+        )
+        print(
+            f"error: {len(idx)} elements match {sel!r} — refusing to guess which "
+            f"to act on. Pick one with --nth N, or --first to take the first. "
+            f"Matches: {opts}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     n = els[idx[nth or 0]]
     x, y = n.center
@@ -483,11 +582,13 @@ def cmd_tap(dev: Device, a) -> int:
 def cmd_type(dev: Device, a) -> int:
     non_ascii = [c for c in a.value if ord(c) > 127]
     if non_ascii:
-        die(f"`adb shell input text` cannot send non-ASCII "
+        die(
+            f"`adb shell input text` cannot send non-ASCII "
             f"({''.join(sorted(set(non_ascii)))!r}) — on Android 15 it throws and "
             f"types NOTHING. There is no adb-only workaround (no `cmd clipboard` "
             f"either). Escalate: pip install uiautomator2, then "
-            f"u2.connect().send_keys(text), or install an IME such as ADBKeyBoard.")
+            f"u2.connect().send_keys(text), or install an IME such as ADBKeyBoard."
+        )
     if a.into is not None or a.text_sel or a.id or a.desc or a.at:
         a.target, a.text = a.into, a.text_sel
         x, y, what = _resolve(dev, a)
@@ -503,20 +604,33 @@ def cmd_type(dev: Device, a) -> int:
     return 0
 
 
-KEYS = {"back": "KEYCODE_BACK", "home": "KEYCODE_HOME", "enter": "KEYCODE_ENTER",
-        "tab": "KEYCODE_TAB", "delete": "KEYCODE_DEL", "escape": "KEYCODE_ESCAPE",
-        "recents": "KEYCODE_APP_SWITCH", "menu": "KEYCODE_MENU",
-        "search": "KEYCODE_SEARCH", "power": "KEYCODE_POWER",
-        "volup": "KEYCODE_VOLUME_UP", "voldown": "KEYCODE_VOLUME_DOWN",
-        "up": "KEYCODE_DPAD_UP", "down": "KEYCODE_DPAD_DOWN",
-        "left": "KEYCODE_DPAD_LEFT", "right": "KEYCODE_DPAD_RIGHT"}
+KEYS = {
+    "back": "KEYCODE_BACK",
+    "home": "KEYCODE_HOME",
+    "enter": "KEYCODE_ENTER",
+    "tab": "KEYCODE_TAB",
+    "delete": "KEYCODE_DEL",
+    "escape": "KEYCODE_ESCAPE",
+    "recents": "KEYCODE_APP_SWITCH",
+    "menu": "KEYCODE_MENU",
+    "search": "KEYCODE_SEARCH",
+    "power": "KEYCODE_POWER",
+    "volup": "KEYCODE_VOLUME_UP",
+    "voldown": "KEYCODE_VOLUME_DOWN",
+    "up": "KEYCODE_DPAD_UP",
+    "down": "KEYCODE_DPAD_DOWN",
+    "left": "KEYCODE_DPAD_LEFT",
+    "right": "KEYCODE_DPAD_RIGHT",
+}
 
 
 def cmd_key(dev: Device, a) -> int:
     code = KEYS.get(a.name.lower(), a.name.upper())
     if not code.startswith("KEYCODE_") and not code.isdigit():
-        die(f"unknown key {a.name!r}. Known: {', '.join(sorted(KEYS))}, "
-            "or any KEYCODE_* / raw keycode number.")
+        die(
+            f"unknown key {a.name!r}. Known: {', '.join(sorted(KEYS))}, "
+            "or any KEYCODE_* / raw keycode number."
+        )
     dev.shell("input", "keyevent", code)
     print(f"pressed {code}")
     return 0
@@ -526,8 +640,12 @@ def cmd_swipe(dev: Device, a) -> int:
     w, h = dev.screen_size()
     cx, cy = w // 2, h // 2
     dy, dx = int(h * 0.35), int(w * 0.35)
-    moves = {"up": (cx, cy + dy, cx, cy - dy), "down": (cx, cy - dy, cx, cy + dy),
-             "left": (cx + dx, cy, cx - dx, cy), "right": (cx - dx, cy, cx + dx, cy)}
+    moves = {
+        "up": (cx, cy + dy, cx, cy - dy),
+        "down": (cx, cy - dy, cx, cy + dy),
+        "left": (cx + dx, cy, cx - dx, cy),
+        "right": (cx - dx, cy, cx + dx, cy),
+    }
     x1, y1, x2, y2 = moves[a.direction]
     dev.shell("input", "swipe", *map(str, (x1, y1, x2, y2, a.ms)))
     print(f"swiped {a.direction} ({x1},{y1} -> {x2},{y2})")
@@ -538,9 +656,11 @@ def cmd_shot(dev: Device, a) -> int:
     path = a.path or f"screen-{int(time.time())}.png"
     data = dev.run("exec-out", "screencap", "-p", binary=True).stdout or b""
     if not data.startswith(b"\x89PNG"):
-        die("screencap returned no PNG — the device may be asleep or the adb "
+        die(
+            "screencap returned no PNG — the device may be asleep or the adb "
             "transport wedged. (A FLAG_SECURE screen returns a valid but BLACK "
-            "PNG, not an error.)")
+            "PNG, not an error.)"
+        )
     with open(path, "wb") as fh:
         fh.write(data)
     print(f"{path} ({len(data)} bytes)")
@@ -556,8 +676,11 @@ def cmd_wait(dev: Device, a) -> int:
             print(f"{'gone' if a.gone else 'found'}: {want!r}")
             return 0
         if time.time() >= deadline:
-            print(f"error: timed out after {a.timeout}s waiting for {want!r} to "
-                  f"{'disappear' if a.gone else 'appear'}", file=sys.stderr)
+            print(
+                f"error: timed out after {a.timeout}s waiting for {want!r} to "
+                f"{'disappear' if a.gone else 'appear'}",
+                file=sys.stderr,
+            )
             return 1
         time.sleep(0.5)
 
@@ -566,8 +689,10 @@ def cmd_assert(dev: Device, a) -> int:
     if a.activity:
         cur = dev.current()
         ok = a.activity in cur
-        print(f"{'PASS' if ok else 'FAIL'} activity contains {a.activity!r} "
-              f"(actual: {cur})", file=None if ok else sys.stderr)
+        print(
+            f"{'PASS' if ok else 'FAIL'} activity contains {a.activity!r} (actual: {cur})",
+            file=None if ok else sys.stderr,
+        )
         return 0 if ok else 1
     want = a.text or a.id or a.desc
     if not want:
@@ -578,9 +703,11 @@ def cmd_assert(dev: Device, a) -> int:
         print(f"PASS {want!r} {'absent' if a.absent else 'present'}")
         return 0
     labels = [n.label for n in els if n.label][:20]
-    print(f"FAIL expected {want!r} to be {'absent' if a.absent else 'present'}. "
-          f"On screen: {', '.join(repr(x) for x in labels) or '(nothing readable)'}",
-          file=sys.stderr)
+    print(
+        f"FAIL expected {want!r} to be {'absent' if a.absent else 'present'}. "
+        f"On screen: {', '.join(repr(x) for x in labels) or '(nothing readable)'}",
+        file=sys.stderr,
+    )
     return 1
 
 
@@ -590,29 +717,39 @@ def cmd_app(dev: Device, a) -> int:
         return 0
     if a.action == "list":
         out = dev.shell("pm", "list", "packages", "-3")
-        pkgs = sorted(l.split(":", 1)[1] for l in out.splitlines() if ":" in l)
+        pkgs = sorted(ln.split(":", 1)[1] for ln in out.splitlines() if ":" in ln)
         if a.pkg:
             pkgs = [p for p in pkgs if a.pkg.lower() in p.lower()]
-        print("\n".join(pkgs) or
-              "(no user-installed packages; -3 excludes system apps)")
+        print("\n".join(pkgs) or "(no user-installed packages; -3 excludes system apps)")
         return 0
     if not a.pkg:
         die(f"`app {a.action}` needs a package name")
     if a.action == "start":
-        brief = dev.shell("cmd", "package", "resolve-activity", "--brief",
-                          "--user", dev.user(),
-                          "-a", "android.intent.action.MAIN",
-                          "-c", "android.intent.category.LAUNCHER", a.pkg)
-        comp = next((l.strip() for l in brief.splitlines()
-                     if "/" in l and not l.startswith("No ")), "")
+        brief = dev.shell(
+            "cmd",
+            "package",
+            "resolve-activity",
+            "--brief",
+            "--user",
+            dev.user(),
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            a.pkg,
+        )
+        comp = next(
+            (ln.strip() for ln in brief.splitlines() if "/" in ln and not ln.startswith("No ")), ""
+        )
         if comp:
             dev.shell("am", "start", "-W", "-n", comp)
             print(f"started {comp}")
         else:
-            dev.shell("monkey", "-p", a.pkg, "-c",
-                      "android.intent.category.LAUNCHER", "1")
-            print(f"started {a.pkg} (via monkey; no launcher activity resolved — "
-                  f"the app may be a service, a widget, or not installed)")
+            dev.shell("monkey", "-p", a.pkg, "-c", "android.intent.category.LAUNCHER", "1")
+            print(
+                f"started {a.pkg} (via monkey; no launcher activity resolved — "
+                f"the app may be a service, a widget, or not installed)"
+            )
         return 0
     verbs = {"stop": ("am", "force-stop"), "clear": ("pm", "clear")}
     print(dev.shell(*verbs[a.action], a.pkg).strip() or f"{a.action} {a.pkg}: ok")
@@ -623,8 +760,7 @@ def cmd_app(dev: Device, a) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="uia",
-                                description="Compact Android UI driver over adb.")
+    p = argparse.ArgumentParser(prog="uia", description="Compact Android UI driver over adb.")
     p.add_argument("--serial", help="target device (required for physical phones)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -648,8 +784,9 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("tap", help="tap (or --long press) an element")
     selectors(t)
     t.add_argument("--long", action="store_true", help="long-press instead")
-    t.add_argument("--first", action="store_true",
-                   help="accept the first of several matches (default: refuse)")
+    t.add_argument(
+        "--first", action="store_true", help="accept the first of several matches (default: refuse)"
+    )
 
     ty = sub.add_parser("type", help="type ASCII text, optionally focusing a field")
     ty.add_argument("value")
@@ -659,14 +796,16 @@ def build_parser() -> argparse.ArgumentParser:
     ty.add_argument("--desc", help="focus the field with this content-desc")
     ty.add_argument("--at", help="focus this X,Y first")
     ty.add_argument("--nth", type=int, help="pick the Nth match (0-based)")
-    ty.add_argument("--first", action="store_true",
-                    help="accept the first of several matches (default: refuse)")
+    ty.add_argument(
+        "--first", action="store_true", help="accept the first of several matches (default: refuse)"
+    )
 
     k = sub.add_parser("key", help="press a key (back, home, enter, ...)")
     k.add_argument("name")
 
-    sw = sub.add_parser("swipe", help="swipe; direction = the way the FINGER moves "
-                                      "(swipe up scrolls the page down)")
+    sw = sub.add_parser(
+        "swipe", help="swipe; direction = the way the FINGER moves (swipe up scrolls the page down)"
+    )
     sw.add_argument("direction", choices=["up", "down", "left", "right"])
     sw.add_argument("--ms", type=int, default=300)
 
@@ -675,13 +814,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     w = sub.add_parser("wait", help="poll until an element appears (or --gone)")
     selectors(w, index=False)
-    w.set_defaults(first=True)   # a query, not a mutation: any match counts
+    w.set_defaults(first=True)  # a query, not a mutation: any match counts
     w.add_argument("--timeout", type=float, default=15)
     w.add_argument("--gone", action="store_true")
 
     a = sub.add_parser("assert", help="assert screen state; exits 1 on failure")
     selectors(a, index=False)
-    a.set_defaults(first=True)   # a query, not a mutation: any match counts
+    a.set_defaults(first=True)  # a query, not a mutation: any match counts
     a.add_argument("--activity", help="assert the focused activity contains this")
     a.add_argument("--absent", action="store_true", help="assert NOT present")
 
@@ -691,9 +830,18 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-HANDLERS = {"snap": cmd_snap, "text": cmd_text, "tap": cmd_tap, "type": cmd_type,
-            "key": cmd_key, "swipe": cmd_swipe, "shot": cmd_shot, "wait": cmd_wait,
-            "assert": cmd_assert, "app": cmd_app}
+HANDLERS = {
+    "snap": cmd_snap,
+    "text": cmd_text,
+    "tap": cmd_tap,
+    "type": cmd_type,
+    "key": cmd_key,
+    "swipe": cmd_swipe,
+    "shot": cmd_shot,
+    "wait": cmd_wait,
+    "assert": cmd_assert,
+    "app": cmd_app,
+}
 
 
 FIXTURE = """<?xml version='1.0' encoding='UTF-8'?><hierarchy rotation="0">
@@ -730,39 +878,43 @@ def self_test() -> int:
     nodes = parse(FIXTURE, 1080, 2400)
     check("offscreen node dropped", not any(n.text == "Offscreen" for n in nodes))
 
-    els, total = compact(nodes, 0)
+    els, _total = compact(nodes, 0)
     labels = [n.text or n.desc for n in els]
-    check("clickable parent absorbs its text children",
-          any(l == "Wi-Fi / Connected" for l in labels))
-    check("absorbed children are not emitted separately",
-          "Wi-Fi" not in labels and "Connected" not in labels)
-    check("EditText gets the edit role",
-          any(n.role == "edit" and n.desc == "Email" for n in els))
+    check(
+        "clickable parent absorbs its text children",
+        any(ln == "Wi-Fi / Connected" for ln in labels),
+    )
+    check(
+        "absorbed children are not emitted separately",
+        "Wi-Fi" not in labels and "Connected" not in labels,
+    )
+    check("EditText gets the edit role", any(n.role == "edit" and n.desc == "Email" for n in els))
     check("password field is flagged", any(n.password for n in els))
-    check("checkable keeps its state",
-          any(n.role == "chk" and not n.checked for n in els))
-    check("rows are in reading order",
-          [n.y1 for n in els] == sorted(n.y1 for n in els))
+    check("checkable keeps its state", any(n.role == "chk" and not n.checked for n in els))
+    check("rows are in reading order", [n.y1 for n in els] == sorted(n.y1 for n in els))
 
     _, total_all = compact(parse(FIXTURE, 1080, 2400), 0)
     capped, total_capped = compact(parse(FIXTURE, 1080, 2400), 2)
-    check("cap limits rows but reports the true total",
-          len(capped) == 2 and total_capped == total_all)
+    check(
+        "cap limits rows but reports the true total", len(capped) == 2 and total_capped == total_all
+    )
 
     check("clip caps long labels", len(clip("x" * 500)) == 80)
     check("clip leaves short labels alone", clip("Sign in") == "Sign in")
     check("clip collapses whitespace", clip("a\n  b") == "a b")
 
-    check("match is exact-first",
-          match(els, text="Wi-Fi / Connected") == [i for i, n in enumerate(els)
-                                                   if n.text == "Wi-Fi / Connected"])
+    check(
+        "match is exact-first",
+        match(els, text="Wi-Fi / Connected")
+        == [i for i, n in enumerate(els) if n.text == "Wi-Fi / Connected"],
+    )
     check("match falls back to substring", bool(match(els, text="connected")))
     check("match on absorbed child text still resolves", bool(match(els, text="Wi-Fi")))
-    check("resource-id is shortened past the slash",
-          any(n.rid == "email" for n in els))
+    check("resource-id is shortened past the slash", any(n.rid == "email" for n in els))
 
-    print(f"RESULT: {'ok' if not fails else 'fail'} "
-          f"({len(fails)} failed)" if fails else "RESULT: ok")
+    print(
+        f"RESULT: {'ok' if not fails else 'fail'} ({len(fails)} failed)" if fails else "RESULT: ok"
+    )
     return 1 if fails else 0
 
 
@@ -772,15 +924,19 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.cmd == "devices":
         adb = find_adb()
-        print(subprocess.run([adb, "devices", "-l"], capture_output=True,
-                             text=True, timeout=ADB_TIMEOUT).stdout.strip())
+        print(
+            subprocess.run(
+                [adb, "devices", "-ln"], capture_output=True, text=True, timeout=ADB_TIMEOUT
+            ).stdout.strip()
+        )
         return 0
     dev = Device(args.serial)
     try:
         return HANDLERS[args.cmd](dev, args)
     except subprocess.TimeoutExpired:
-        die(f"adb timed out after {ADB_TIMEOUT}s — the device may be busy, asleep, "
-            f"or disconnected.")
+        die(
+            f"adb timed out after {ADB_TIMEOUT}s — the device may be busy, asleep, or disconnected."
+        )
     except KeyboardInterrupt:
         return 130
 

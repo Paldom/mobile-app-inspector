@@ -82,7 +82,7 @@ Slash-invoked only: it flips repository visibility, which is hard to undo social
    ```bash
    npx skills@latest add <owner>/<repo> --list
    mkdir -p /tmp/skills-verify && cd /tmp/skills-verify
-   env -u DISABLE_TELEMETRY -u DO_NOT_TRACK npx skills@latest add <owner>/<repo> --skill '*' -a claude-code -y
+   env -u DISABLE_TELEMETRY -u DO_NOT_TRACK npx skills@latest add <owner>/<repo> -a claude-code -y   # NO --skill '*': the wildcard opts into internal dev skills
    npx skills list -a claude-code
    ```
    Then confirm the listing: `curl -sIL https://skills.sh/<owner>/<repo>` turns

@@ -1,7 +1,7 @@
 ---
 name: android-intent-probe
 license: MIT
-description: Probes an Android app's exported components and deep links by firing them from outside the app, and records what happens - launched, crashed, denied or unreachable. Use when asked to test exported activities, receivers, services, providers, deep links or intent filters, or whether a manifest's attack surface is really reachable. Not for driving the UI, static component listing, or web API fuzzing.
+description: Probes an Android app's exported components and deep links by firing them from outside the app, and records what happens - launched, crashed, denied or unreachable. Use to test exported activities, receivers, services or providers, to check whether a deeplink or custom URL scheme opens anything, or whether a manifest's attack surface is really reachable. Not for driving the UI, static component listing, or web API fuzzing.
 argument-hint: "<package> [--apkscan apkscan.json]"
 ---
 

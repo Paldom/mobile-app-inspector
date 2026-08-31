@@ -7,6 +7,7 @@ pass `--set bodies=true`, because captured flows routinely contain tokens and
 personal data. Query strings are dropped from the summarized path (they carry
 ids). This addon is loaded by mitmproxy, not run directly.
 """
+
 import json
 import time
 
@@ -17,8 +18,14 @@ try:
 except ImportError:
     ctx = http = None
 
-REDACT = {"authorization", "cookie", "set-cookie", "proxy-authorization",
-          "x-auth-token", "x-api-key"}
+REDACT = {
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "proxy-authorization",
+    "x-auth-token",
+    "x-api-key",
+}
 
 
 def load(loader):

@@ -11,6 +11,7 @@ SharedPreferences, or intercept TLS traffic. Those need a debuggable build
 
 Exit codes: 0 ok | 1 package not installed / nothing found | 2 usage or device error.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,9 +39,12 @@ def find_adb() -> str:
     exe = shutil.which("adb")
     if exe:
         return exe
-    for root in (os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),
-                 os.path.expanduser("~/Library/Android/sdk"),
-                 os.path.expanduser("~/Android/Sdk")):
+    for root in (
+        os.environ.get("ANDROID_HOME"),
+        os.environ.get("ANDROID_SDK_ROOT"),
+        os.path.expanduser("~/Library/Android/sdk"),
+        os.path.expanduser("~/Android/Sdk"),
+    ):
         if root:
             cand = os.path.join(root, "platform-tools", "adb")
             if os.path.isfile(cand) and os.access(cand, os.X_OK):
@@ -52,8 +56,7 @@ def find_aapt2() -> str | None:
     exe = shutil.which("aapt2")
     if exe:
         return exe
-    for root in (os.environ.get("ANDROID_HOME"),
-                 os.path.expanduser("~/Library/Android/sdk")):
+    for root in (os.environ.get("ANDROID_HOME"), os.path.expanduser("~/Library/Android/sdk")):
         bt = os.path.join(root or "", "build-tools")
         if os.path.isdir(bt):
             for ver in sorted(os.listdir(bt), reverse=True):
@@ -69,10 +72,14 @@ class Device:
         self.serial = serial or os.environ.get("ANDROID_SERIAL") or self._pick()
 
     def _pick(self) -> str:
-        out = subprocess.run([self.adb, "devices"], capture_output=True,
-                             text=True, timeout=ADB_TIMEOUT).stdout
-        devs = [l.split("\t")[0] for l in out.splitlines()[1:]
-                if l.strip() and l.endswith("\tdevice")]
+        out = subprocess.run(
+            [self.adb, "devices"], capture_output=True, text=True, timeout=ADB_TIMEOUT
+        ).stdout
+        devs = [
+            ln.split("\t")[0]
+            for ln in out.splitlines()[1:]
+            if ln.strip() and ln.endswith("\tdevice")
+        ]
         if not devs:
             die("no device attached.", 1)
         if len(devs) > 1:
@@ -80,8 +87,12 @@ class Device:
         return devs[0]
 
     def run(self, *args, binary=False, timeout=ADB_TIMEOUT):
-        return subprocess.run([self.adb, "-s", self.serial] + list(args),
-                              capture_output=True, timeout=timeout, text=not binary)
+        return subprocess.run(
+            [self.adb, "-s", self.serial, *list(args)],
+            capture_output=True,
+            timeout=timeout,
+            text=not binary,
+        )
 
     def user(self) -> str:
         """The foreground Android user. A work profile or secondary user makes a
@@ -100,9 +111,11 @@ class Device:
 
 # ---------------------------------------------------------------- parsing
 
-SECTION = re.compile(r"^\s*(declared permissions|requested permissions|"
-                     r"install permissions|runtime permissions|"
-                     r"disabled components|enabled components):\s*$")
+SECTION = re.compile(
+    r"^\s*(declared permissions|requested permissions|"
+    r"install permissions|runtime permissions|"
+    r"disabled components|enabled components):\s*$"
+)
 
 
 def parse_sections(dump: str) -> dict[str, list[str]]:
@@ -148,7 +161,8 @@ def identity(dump: str) -> dict:
         "firstInstallTime": grab(r"firstInstallTime=(.+)").strip(),
         "lastUpdateTime": grab(r"lastUpdateTime=(.+)").strip(),
         "installer": (lambda w: "(none — sideloaded or preinstalled)" if w in ("null", "") else w)(
-            grab(r"installerPackageName=(\S+)")),
+            grab(r"installerPackageName=(\S+)")
+        ),
         "signatureDigest": grab(r"signatures:\[([0-9a-f]+)"),
         "dataDir": grab(r"dataDir=(\S+)"),
         "uid": grab(r"appId=(\d+)"),  # `userId=` is the Android *user*, not the app uid
@@ -175,8 +189,11 @@ def dangerous_set(dev: Device) -> set[str]:
     # ungrouped dangerous permissions (3 on API 35), not the ~129 real ones.
     # Entries are indented under their group, so strip before matching.
     out = dev.shell("pm", "list", "permissions", "-g", "-d")
-    return {l.strip().split(":", 1)[1] for l in out.splitlines()
-            if l.strip().startswith("permission:")}
+    return {
+        ln.strip().split(":", 1)[1]
+        for ln in out.splitlines()
+        if ln.strip().startswith("permission:")
+    }
 
 
 def cmd_report(dev: Device, a) -> int:
@@ -187,21 +204,30 @@ def cmd_report(dev: Device, a) -> int:
     dangerous = dangerous_set(dev)
 
     requested = sorted(set(secs.get("requested permissions", [])))
-    runtime = [parse_perm_line(l) for l in secs.get("runtime permissions", [])]
+    runtime = [parse_perm_line(ln) for ln in secs.get("runtime permissions", [])]
     granted = sorted(n for n, g in runtime if g)
     denied = sorted(n for n, g in runtime if g is False)
-    apks = [l.split(":", 1)[1].strip() for l in
-            dev.shell("pm", "path", "--user", dev.user(), pkg).splitlines()
-            if l.startswith("package:")]
+    apks = [
+        ln.split(":", 1)[1].strip()
+        for ln in dev.shell("pm", "path", "--user", dev.user(), pkg).splitlines()
+        if ln.startswith("package:")
+    ]
 
-    data = {"package": pkg, **ident, "apks": apks, "splitApks": len(apks) > 1,
-            "requestedPermissions": requested,
-            "dangerousRequested": sorted(set(requested) & dangerous),
-            "runtimeGranted": granted, "runtimeDenied": denied,
-            "declaresOwnPermissions": sorted(
-                {l.split(":")[0] for l in secs.get("declared permissions", [])}),
-            "debuggable": "DEBUGGABLE" in ident["flags"],
-            "system": "SYSTEM" in ident["flags"]}
+    data = {
+        "package": pkg,
+        **ident,
+        "apks": apks,
+        "splitApks": len(apks) > 1,
+        "requestedPermissions": requested,
+        "dangerousRequested": sorted(set(requested) & dangerous),
+        "runtimeGranted": granted,
+        "runtimeDenied": denied,
+        "declaresOwnPermissions": sorted(
+            {ln.split(":")[0] for ln in secs.get("declared permissions", [])}
+        ),
+        "debuggable": "DEBUGGABLE" in ident["flags"],
+        "system": "SYSTEM" in ident["flags"],
+    }
 
     if a.json:
         print(json.dumps(data, indent=1))
@@ -218,20 +244,29 @@ def cmd_report(dev: Device, a) -> int:
     print(f"  apks         {len(apks)}" + ("  (split APKs)" if len(apks) > 1 else ""))
     for p in apks:
         print(f"                 {p}")
-    print(f"  permissions  {len(requested)} requested, "
-          f"{len(data['dangerousRequested'])} dangerous, "
-          f"{len(granted)} runtime-granted, {len(denied)} denied")
+    print(
+        f"  permissions  {len(requested)} requested, "
+        f"{len(data['dangerousRequested'])} dangerous, "
+        f"{len(granted)} runtime-granted, {len(denied)} denied"
+    )
     if data["dangerousRequested"]:
         print("  dangerous:")
         for p in data["dangerousRequested"]:
-            state = ("granted" if p in granted else
-                     "denied" if p in denied else "not yet requested at runtime")
+            state = (
+                "granted"
+                if p in granted
+                else "denied"
+                if p in denied
+                else "not yet requested at runtime"
+            )
             print(f"    - {p.replace('android.permission.', '')}  [{state}]")
     if data["declaresOwnPermissions"]:
         print(f"  declares     {', '.join(data['declaresOwnPermissions'])}")
     if data["debuggable"]:
-        print("  NOTE: DEBUGGABLE build — `run-as` works, so app-private storage "
-              "is readable without root.")
+        print(
+            "  NOTE: DEBUGGABLE build — `run-as` works, so app-private storage "
+            "is readable without root."
+        )
     return 0
 
 
@@ -241,8 +276,8 @@ def cmd_permissions(dev: Device, a) -> int:
     secs = parse_sections(dump)
     dangerous = dangerous_set(dev)
     requested = sorted(set(secs.get("requested permissions", [])))
-    runtime = dict(parse_perm_line(l) for l in secs.get("runtime permissions", []))
-    install = dict(parse_perm_line(l) for l in secs.get("install permissions", []))
+    runtime = dict(parse_perm_line(ln) for ln in secs.get("runtime permissions", []))
+    install = dict(parse_perm_line(ln) for ln in secs.get("install permissions", []))
 
     if not requested:
         print(f"{pkg} requests no permissions")
@@ -260,29 +295,38 @@ def cmd_permissions(dev: Device, a) -> int:
             kind = "not held"
         flag = " *DANGEROUS*" if p in dangerous else ""
         print(f"{state} {kind:9} {short}{flag}")
-    print(f"\n{len(requested)} requested; "
-          f"{len(set(requested) & dangerous)} classed dangerous by this device "
-          f"(API {dev.shell('getprop', 'ro.build.version.sdk').strip()}).")
-    print("Runtime state reflects what has actually been granted — installing with "
-          "`adb install -g` pre-grants everything and will make a privacy review "
-          "look falsely permissive.")
+    print(
+        f"\n{len(requested)} requested; "
+        f"{len(set(requested) & dangerous)} classed dangerous by this device "
+        f"(API {dev.shell('getprop', 'ro.build.version.sdk').strip()})."
+    )
+    print(
+        "Runtime state reflects what has actually been granted — installing with "
+        "`adb install -g` pre-grants everything and will make a privacy review "
+        "look falsely permissive."
+    )
     return 0
 
 
 def cmd_crashes(dev: Device, a) -> int:
     pkg = a.package
     crash = dev.shell("logcat", "-b", "crash", "-d", "-v", "threadtime")
-    lines = [l for l in crash.splitlines() if pkg in l or "FATAL EXCEPTION" in l]
-    anr = [l for l in dev.shell("logcat", "-b", "main", "-d", "-v", "brief").splitlines()
-           if "ANR in" in l and pkg in l]
+    lines = [ln for ln in crash.splitlines() if pkg in ln or "FATAL EXCEPTION" in ln]
+    anr = [
+        ln
+        for ln in dev.shell("logcat", "-b", "main", "-d", "-v", "brief").splitlines()
+        if "ANR in" in ln and pkg in ln
+    ]
     if not lines and not anr:
-        print(f"no crashes or ANRs for {pkg} in the current log buffers "
-              f"(buffers are ring buffers — clear with `adb logcat -c` before a run "
-              f"so you know what is fresh)")
+        print(
+            f"no crashes or ANRs for {pkg} in the current log buffers "
+            f"(buffers are ring buffers — clear with `adb logcat -c` before a run "
+            f"so you know what is fresh)"
+        )
         return 1
     if lines:
         print(f"--- crash buffer ({len(lines)} lines) ---")
-        print("\n".join(lines[-a.lines:]))
+        print("\n".join(lines[-a.lines :]))
     if anr:
         print(f"--- ANRs ({len(anr)}) ---")
         print("\n".join(anr))
@@ -293,8 +337,10 @@ def cmd_perf(dev: Device, a) -> int:
     pkg = a.package
     mem = dev.shell("dumpsys", "meminfo", pkg)
     if "No process found" in mem:
-        print(f"{pkg} is not running — start it first (memory is only measurable "
-              f"for a live process)", file=sys.stderr)
+        print(
+            f"{pkg} is not running — start it first (memory is only measurable for a live process)",
+            file=sys.stderr,
+        )
         return 1
     total = re.search(r"TOTAL PSS:\s*(\d+)", mem) or re.search(r"TOTAL\s+(\d+)", mem)
     java = re.search(r"Java Heap:\s*(\d+)", mem)
@@ -310,8 +356,9 @@ def cmd_perf(dev: Device, a) -> int:
     frames = re.search(r"Total frames rendered: (\d+)", gfx)
     janky = re.search(r"Janky frames: (\d+) \(([\d.]+)%\)", gfx)
     if frames and janky:
-        print(f"  frames       {frames.group(1)} rendered, "
-              f"{janky.group(1)} janky ({janky.group(2)}%)")
+        print(
+            f"  frames       {frames.group(1)} rendered, {janky.group(1)} janky ({janky.group(2)}%)"
+        )
     else:
         print("  frames       (no gfxinfo yet — interact with the app, then re-run)")
     return 0
@@ -319,9 +366,11 @@ def cmd_perf(dev: Device, a) -> int:
 
 def cmd_apk(dev: Device, a) -> int:
     pkg = a.package
-    paths = [l.split(":", 1)[1].strip() for l in
-             dev.shell("pm", "path", "--user", dev.user(), pkg).splitlines()
-             if l.startswith("package:")]
+    paths = [
+        ln.split(":", 1)[1].strip()
+        for ln in dev.shell("pm", "path", "--user", dev.user(), pkg).splitlines()
+        if ln.startswith("package:")
+    ]
     if not paths:
         die(f"{pkg} is not installed", 1)
     print(f"{pkg}: {len(paths)} APK(s)")
@@ -344,17 +393,25 @@ def cmd_apk(dev: Device, a) -> int:
             digest = hashlib.sha256(fh.read()).hexdigest()
         print(f"\n{local}\n  sha256 {digest}")
         if aapt2:
-            badging = subprocess.run([aapt2, "dump", "badging", local],
-                                     capture_output=True, text=True).stdout
-            for key in ("package:", "sdkVersion:", "targetSdkVersion:",
-                        "application-label:", "native-code:"):
+            badging = subprocess.run(
+                [aapt2, "dump", "badging", local], capture_output=True, text=True
+            ).stdout
+            for key in (
+                "package:",
+                "sdkVersion:",
+                "targetSdkVersion:",
+                "application-label:",
+                "native-code:",
+            ):
                 for line in badging.splitlines():
                     if line.startswith(key):
                         print(f"  {line}")
                         break
     if not aapt2:
-        print("\n(aapt2 not found — install Android SDK build-tools to read the "
-              "manifest; it is not part of platform-tools)")
+        print(
+            "\n(aapt2 not found — install Android SDK build-tools to read the "
+            "manifest; it is not part of platform-tools)"
+        )
     return 0
 
 
@@ -398,22 +455,31 @@ def self_test() -> int:
     check("uid comes from appId, not userId", ident["uid"] == "10207")
     check("signer digest parsed", ident["signatureDigest"] == "8b8a3ff5")
     check("Play installer surfaced", ident["installer"] == "com.android.vending")
-    check("null installer reads as sideloaded",
-          "sideloaded" in identity("installerPackageName=null")["installer"])
+    check(
+        "null installer reads as sideloaded",
+        "sideloaded" in identity("installerPackageName=null")["installer"],
+    )
 
     secs = parse_sections(DUMP_FIXTURE)
-    check("requested permissions collected",
-          sorted(secs["requested permissions"]) ==
-          ["android.permission.CAMERA", "android.permission.INTERNET"])
+    check(
+        "requested permissions collected",
+        sorted(secs["requested permissions"])
+        == ["android.permission.CAMERA", "android.permission.INTERNET"],
+    )
     check("declared permissions kept separate", len(secs["declared permissions"]) == 1)
     check("runtime permissions collected", len(secs["runtime permissions"]) == 1)
-    check("granted=false is parsed as denied, not missing",
-          parse_perm_line(secs["runtime permissions"][0]) ==
-          ("android.permission.CAMERA", False))
-    check("install permission parsed as granted",
-          parse_perm_line(secs["install permissions"][0])[1] is True)
-    check("a permission with no granted= yields None",
-          parse_perm_line("android.permission.FOO")[1] is None)
+    check(
+        "granted=false is parsed as denied, not missing",
+        parse_perm_line(secs["runtime permissions"][0]) == ("android.permission.CAMERA", False),
+    )
+    check(
+        "install permission parsed as granted",
+        parse_perm_line(secs["install permissions"][0])[1] is True,
+    )
+    check(
+        "a permission with no granted= yields None",
+        parse_perm_line("android.permission.FOO")[1] is None,
+    )
 
     check("valid package accepted", bool(PKG_RE.match("com.example.app")))
     for bad in ("foo;touch /tmp/x", "com", "", "no spaces here"):
@@ -426,15 +492,16 @@ def self_test() -> int:
 def main(argv=None) -> int:
     if "--self-test" in (argv if argv is not None else sys.argv[1:]):
         return self_test()
-    p = argparse.ArgumentParser(prog="pkgdiag",
-                                description="Non-root Android package diagnostics.")
+    p = argparse.ArgumentParser(prog="pkgdiag", description="Non-root Android package diagnostics.")
     p.add_argument("--serial")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, help_ in [("report", "one-shot summary: identity, provenance, permissions"),
-                        ("permissions", "every requested permission and its real state"),
-                        ("crashes", "crashes and ANRs for this package"),
-                        ("perf", "memory and frame-jank of the running process"),
-                        ("apk", "APK paths, sizes, hashes, manifest")]:
+    for name, help_ in [
+        ("report", "one-shot summary: identity, provenance, permissions"),
+        ("permissions", "every requested permission and its real state"),
+        ("crashes", "crashes and ANRs for this package"),
+        ("perf", "memory and frame-jank of the running process"),
+        ("apk", "APK paths, sizes, hashes, manifest"),
+    ]:
         sp = sub.add_parser(name, help=help_)
         sp.add_argument("package")
         if name == "report":
@@ -446,8 +513,13 @@ def main(argv=None) -> int:
 
     a = p.parse_args(argv)
     dev = Device(a.serial)
-    handlers = {"report": cmd_report, "permissions": cmd_permissions,
-                "crashes": cmd_crashes, "perf": cmd_perf, "apk": cmd_apk}
+    handlers = {
+        "report": cmd_report,
+        "permissions": cmd_permissions,
+        "crashes": cmd_crashes,
+        "perf": cmd_perf,
+        "apk": cmd_apk,
+    }
     try:
         return handlers[a.cmd](dev, a)
     except subprocess.TimeoutExpired:
